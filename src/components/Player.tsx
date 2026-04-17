@@ -1,0 +1,356 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useRef, useMemo, useEffect } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { useKeyboardControls, Float } from '@react-three/drei';
+import * as THREE from 'three';
+import { useGameStore } from '../store';
+
+export default function Player() {
+  const group = useRef<THREE.Group>(null);
+  const bodyGroup = useRef<THREE.Group>(null);
+  const headGroup = useRef<THREE.Group>(null);
+  const legL = useRef<THREE.Group>(null);
+  const legR = useRef<THREE.Group>(null);
+  const armL = useRef<THREE.Group>(null);
+  const armR = useRef<THREE.Group>(null);
+
+  const gender = useGameStore((state) => state.gender);
+  const phase = useGameStore((state) => state.phase);
+  const currentLevel = useGameStore((state) => state.currentLevel);
+  
+  const [, getKeys] = useKeyboardControls();
+  const isMale = gender === 'male';
+
+  // Movement physics
+  const velocity = useRef(new THREE.Vector3());
+  const position = useRef(new THREE.Vector3(0, 0.5, 0));
+
+  // Reset position on level change
+  useEffect(() => {
+    position.current.set(0, 0.5, 0);
+    velocity.current.set(0, 0, 0);
+    if (group.current) {
+        group.current.position.set(0, 0.5, 0);
+        group.current.rotation.y = 0;
+    }
+  }, [currentLevel]);
+  const GRAVITY = 0.008;
+  const MOVE_SPEED = 0.12;
+  const JUMP_FORCE = 0.18;
+  const onGround = useRef(true);
+
+  // Colors
+  const COLORS = useMemo(() => isMale ? {
+    skin: '#f5c090', body: '#c8a050', pants: '#8a6e30', hat: '#8b5e1a', belt: '#3e2008', boot: '#2e1608'
+  } : {
+    skin: '#f5b898', body: '#5a0e9a', pants: '#2a1860', hat: '#6a00aa', belt: '#2a1808', boot: '#1a1230'
+  }, [isMale]);
+
+  useFrame((state, delta) => {
+    if (phase !== 'playing') return;
+
+    const { forward, backward, left, right, jump, interact } = getKeys();
+    const gates = useGameStore.getState().score; // Number of solved gates
+
+    // Interaction check
+    if (interact && useGameStore.getState().nearGateIndex !== null) {
+      useGameStore.getState().setPhase('puzzle');
+    }
+
+    // Horizontal Movement
+    let dx = 0;
+    let dz = 0;
+    if (forward) dz -= MOVE_SPEED;
+    if (backward) dz += MOVE_SPEED * 0.6;
+    if (left) dx -= MOVE_SPEED * 0.7;
+    if (right) dx += MOVE_SPEED * 0.7;
+
+    velocity.current.x = dx;
+    velocity.current.z = dz;
+
+    // Vertical Movement (Gravity)
+    velocity.current.y -= GRAVITY;
+    
+    // Jump
+    if (jump && onGround.current) {
+      velocity.current.y = JUMP_FORCE;
+      onGround.current = false;
+    }
+
+    position.current.add(velocity.current);
+
+    // --- COLLISIONS ---
+    
+    // Floor collision
+    if (position.current.y <= 0.05) {
+      position.current.y = 0.05;
+      velocity.current.y = 0;
+      onGround.current = true;
+    }
+
+    // World Constraints (Walls)
+    const isAbyss = useGameStore.getState().currentLevel === 3; // level 4 (Abyss)
+    
+    if (isAbyss) {
+        // Narrow path constraints for Abyss
+        if (Math.abs(position.current.x) > 1.6 && position.current.y < 0.2) {
+            // Player is falling!
+            velocity.current.y -= 0.01;
+            if (position.current.y < -5) {
+                // Respawn and lose life
+                useGameStore.getState().solvePuzzle(false); // Wrong answer / Death logic
+                position.current.set(0, 5, position.current.z + 5); // Respawn slightly back and high
+                velocity.current.set(0,0,0);
+            }
+        } else {
+            position.current.x = Math.max(-2.6, Math.min(2.6, position.current.x));
+        }
+    } else {
+        position.current.x = Math.max(-2.6, Math.min(2.6, position.current.x));
+    }
+    
+    position.current.z = Math.min(2, position.current.z); // Back wall
+
+    // Gate Collisions and Proximity
+    let foundGate = null;
+    for (let i = 0; i < 5; i++) {
+        const gateZ = -(i + 1) * 10 - 2;
+        const isSolved = i < gates;
+        
+        // Proximity for interaction (near the altar at x: -2.5)
+        const dist = Math.sqrt(Math.pow(position.current.x + 2.5, 2) + Math.pow(position.current.z - (gateZ + 3), 2));
+        if (dist < 1.5 && !isSolved) {
+            foundGate = i;
+        }
+
+        if (!isSolved) {
+            if (position.current.z < gateZ + 0.5 && position.current.z > gateZ - 0.5) {
+                position.current.z = gateZ + 0.5;
+                velocity.current.z = 0;
+            }
+        }
+    }
+    
+    if (useGameStore.getState().nearGateIndex !== foundGate) {
+        useGameStore.getState().setNearGate(foundGate);
+    }
+
+    // Chest Collision (Victory Point)
+    const CHEST_Z = -56;
+    if (position.current.z < CHEST_Z + 1.2 && position.current.z > CHEST_Z - 1) {
+        if (Math.abs(position.current.x) < 1.0) {
+            position.current.z = CHEST_Z + 1.2;
+            velocity.current.z = 0;
+            // Trigger victory if all gates solved (optional requirement, but let's just trigger it)
+            if (gates >= 5 && phase === 'playing') {
+                useGameStore.getState().setPhase('victory');
+            }
+        }
+    }
+
+    // Update group position
+    if (group.current) {
+      group.current.position.copy(position.current);
+      
+      // Face direction
+      if (dz < 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, 0, 0.2);
+      if (dz > 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, Math.PI, 0.2);
+      if (dx < 0 && dz === 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, Math.PI * 0.5, 0.2);
+      if (dx > 0 && dz === 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, -Math.PI * 0.5, 0.2);
+    }
+
+    // Animation updates...
+    const isMoving = dx !== 0 || dz !== 0;
+    const time = state.clock.getElapsedTime() * 10;
+    
+    if (isMoving) {
+      const swing = Math.sin(time) * 0.6;
+      if (legL.current) legL.current.rotation.x = swing;
+      if (legR.current) legR.current.rotation.x = -swing;
+      if (armL.current) armL.current.rotation.x = -swing * 0.5;
+      if (armR.current) armR.current.rotation.x = swing * 0.5;
+      if (bodyGroup.current) bodyGroup.current.position.y = Math.abs(Math.sin(time * 2)) * 0.05;
+    } else {
+      const breath = Math.sin(state.clock.getElapsedTime() * 2) * 0.02;
+      if (bodyGroup.current) bodyGroup.current.position.y = breath;
+      if (legL.current) legL.current.rotation.x = THREE.MathUtils.lerp(legL.current.rotation.x, 0, 0.1);
+      if (legR.current) legR.current.rotation.x = THREE.MathUtils.lerp(legR.current.rotation.x, 0, 0.1);
+      if (armL.current) armL.current.rotation.x = THREE.MathUtils.lerp(armL.current.rotation.x, 0, 0.1);
+      if (armR.current) armR.current.rotation.x = THREE.MathUtils.lerp(armR.current.rotation.x, 0, 0.1);
+    }
+  });
+
+  return (
+    <group ref={group} name="player_group">
+      <group ref={bodyGroup}>
+        {/* Torso with more detail */}
+        <mesh position={[0, 0.9, 0]} castShadow>
+          <boxGeometry args={[0.6, 0.7, 0.38]} />
+          <meshPhongMaterial color={COLORS.body} shininess={30} />
+          {/* Shirt details */}
+          <mesh position={[0, 0, 0.2]}>
+            <boxGeometry args={[0.1, 0.4, 0.02]} />
+            <meshBasicMaterial color="#333" />
+          </mesh>
+        </mesh>
+        
+        {/* Head with more detail */}
+        <group ref={headGroup} position={[0, 1.5, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.45, 0.45, 0.4]} />
+            <meshPhongMaterial color={COLORS.skin} shininess={10} />
+          </mesh>
+          
+          {/* Eyes with pupils and expression */}
+          <group position={[0, 0.05, -0.21]}>
+             <mesh position={[-0.12, 0, 0]}>
+                <sphereGeometry args={[0.08, 16, 16]} />
+                <meshBasicMaterial color="white" />
+                <mesh position={[0, 0, -0.06]}>
+                    <sphereGeometry args={[0.04, 12, 12]} />
+                    <meshBasicMaterial color="black" />
+                </mesh>
+             </mesh>
+             <mesh position={[0.12, 0, 0]}>
+                <sphereGeometry args={[0.08, 16, 16]} />
+                <meshBasicMaterial color="white" />
+                <mesh position={[0, 0, -0.06]}>
+                    <sphereGeometry args={[0.04, 12, 12]} />
+                    <meshBasicMaterial color="black" />
+                </mesh>
+             </mesh>
+          </group>
+
+          {/* Nose */}
+          <mesh position={[0, -0.05, -0.22]}>
+            <boxGeometry args={[0.06, 0.1, 0.05]} />
+            <meshPhongMaterial color={COLORS.skin} />
+          </mesh>
+
+          {/* Mouth / Smile */}
+          <mesh position={[0, -0.15, -0.21]}>
+             <capsuleGeometry args={[0.05, 0.1, 8, 8]} />
+             <meshPhongMaterial color="#883333" />
+          </mesh>
+          
+          {/* Hair / Hat Details */}
+          {isMale ? (
+            <group position={[0, 0.22, 0]}>
+              <mesh position={[0, 0.1, 0]} castShadow>
+                <cylinderGeometry args={[0.26, 0.3, 0.3, 10]} />
+                <meshPhongMaterial color={COLORS.hat} />
+              </mesh>
+              <mesh position={[0, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.5, 0.5, 0.06, 16]} />
+                <meshPhongMaterial color={COLORS.hat} />
+              </mesh>
+              {/* Hat band */}
+              <mesh position={[0, 0.05, 0]}>
+                <cylinderGeometry args={[0.31, 0.31, 0.05, 10]} />
+                <meshBasicMaterial color="#221105" />
+              </mesh>
+               {/* Side hair */}
+               <mesh position={[-0.23, -0.2, 0.1]}>
+                <boxGeometry args={[0.05, 0.3, 0.2]} />
+                <meshPhongMaterial color="#4a2a10" />
+              </mesh>
+              <mesh position={[0.23, -0.2, 0.1]}>
+                <boxGeometry args={[0.05, 0.3, 0.2]} />
+                <meshPhongMaterial color="#4a2a10" />
+              </mesh>
+            </group>
+          ) : (
+            <group position={[0, 0.1, 0]}>
+                {/* Bun */}
+                <mesh position={[0, 0.15, 0.2]} castShadow>
+                    <sphereGeometry args={[0.2, 16, 12]} />
+                    <meshPhongMaterial color="#1a1111" />
+                </mesh>
+                {/* Hair bang */}
+                 <mesh position={[0, 0.15, -0.1]} castShadow>
+                    <boxGeometry args={[0.48, 0.15, 0.2]} />
+                    <meshPhongMaterial color="#1a1111" />
+                </mesh>
+                <mesh position={[0, -0.2, 0.15]}>
+                    <boxGeometry args={[0.5, 0.5, 0.1]} />
+                    <meshPhongMaterial color="#1a1111" />
+                </mesh>
+            </group>
+          )}
+        </group>
+
+        {/* Backpack Equipment */}
+        <group position={[0, 0.9, 0.25]}>
+            <mesh castShadow>
+                <boxGeometry args={[0.5, 0.6, 0.25]} />
+                <meshPhongMaterial color="#4a3a2a" />
+            </mesh>
+            {/* Straps */}
+            <mesh position={[-0.2, 0, -0.15]}>
+                <boxGeometry args={[0.1, 0.7, 0.05]} />
+                <meshPhongMaterial color="#3a2a1a" />
+            </mesh>
+            <mesh position={[0.2, 0, -0.15]}>
+                <boxGeometry args={[0.1, 0.7, 0.05]} />
+                <meshPhongMaterial color="#3a2a1a" />
+            </mesh>
+            {/* Bedroll on top */}
+             <mesh position={[0, 0.35, 0]} rotation={[0, 0, Math.PI/2]}>
+                <cylinderGeometry args={[0.12, 0.12, 0.55, 8]} />
+                <meshPhongMaterial color="#335533" />
+            </mesh>
+        </group>
+
+        {/* Improved Arms */}
+        <group ref={armL} position={[-0.4, 1.2, 0]}>
+          <mesh position={[0, -0.3, 0]} castShadow>
+            <boxGeometry args={[0.2, 0.6, 0.2]} />
+            <meshPhongMaterial color={COLORS.body} />
+          </mesh>
+          <mesh position={[0, -0.65, 0]} castShadow>
+            <sphereGeometry args={[0.11, 8, 8]} />
+            <meshPhongMaterial color={COLORS.skin} />
+          </mesh>
+        </group>
+        <group ref={armR} position={[0.4, 1.2, 0]}>
+          <mesh position={[0, -0.3, 0]} castShadow>
+            <boxGeometry args={[0.2, 0.6, 0.2]} />
+            <meshPhongMaterial color={COLORS.body} />
+          </mesh>
+          <mesh position={[0, -0.65, 0]} castShadow>
+            <sphereGeometry args={[0.11, 8, 8]} />
+            <meshPhongMaterial color={COLORS.skin} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* Improved Legs */}
+      <group ref={legL} position={[-0.18, 0.6, 0]}>
+        <mesh position={[0, -0.3, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.6, 0.24]} />
+          <meshPhongMaterial color={COLORS.pants} />
+        </mesh>
+        <mesh position={[0, -0.65, 0.02]} castShadow>
+          <boxGeometry args={[0.24, 0.15, 0.32]} />
+          <meshPhongMaterial color={COLORS.boot} />
+        </mesh>
+      </group>
+      <group ref={legR} position={[0.18, 0.6, 0]}>
+        <mesh position={[0, -0.3, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.6, 0.24]} />
+          <meshPhongMaterial color={COLORS.pants} />
+        </mesh>
+        <mesh position={[0, -0.65, 0.02]} castShadow>
+          <boxGeometry args={[0.24, 0.15, 0.32]} />
+          <meshPhongMaterial color={COLORS.boot} />
+        </mesh>
+      </group>
+
+      <pointLight position={[0, 2, 1]} intensity={2.5} color="#ffffff" distance={10} />
+    </group>
+  );
+}

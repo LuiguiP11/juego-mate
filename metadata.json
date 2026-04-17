@@ -1,0 +1,8 @@
+{
+  "name": "Jhiro's Adventure 3D: Templo de los Polinomios",
+  "description": "An educational 3D adventure game where students solve mathematical puzzles and collect treasures in an ancient mystical temple.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
