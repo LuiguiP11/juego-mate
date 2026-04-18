@@ -5,10 +5,12 @@
 
 import GameCanvas from './components/GameCanvas';
 import UIOverlay from './components/UI/UIOverlay';
+import SoundManager from './components/SoundManager';
 
 export default function App() {
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black font-sans text-white select-none">
+      <SoundManager />
       {/* Main 3D Layer */}
       <div className="absolute inset-0 z-0">
         <GameCanvas />

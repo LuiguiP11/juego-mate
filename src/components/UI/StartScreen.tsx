@@ -4,8 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { QrCode, Play, Camera, Star, Sword, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 
@@ -32,6 +32,7 @@ export default function StartScreen() {
     }
     setPlayerInfo(name, name.toLowerCase(), '7mo Grado'); // Mocked grade for now
     startLevel(selectedLevel);
+    setPhase('intro'); // Go to intro first
   };
 
   const startQRScanner = async () => {
@@ -63,73 +64,174 @@ export default function StartScreen() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-[radial-gradient(ellipse_at_center,_#1a1005_0%,_#050200_100%)] pointer-events-auto"
+      className="fixed inset-0 z-[250] bg-[#050402] overflow-y-auto pointer-events-auto selection:bg-orange-500/30"
     >
-      {/* Brand */}
-      <div className="absolute top-10 flex flex-col items-center">
-        <motion.div 
-          animate={{ scale: [1, 1.05, 1], rotate: [0, 2, -2, 0] }}
-          transition={{ duration: 4, repeat: Infinity }}
-          className="text-orange-500 font-serif text-5xl font-black mb-1 drop-shadow-2xl"
-        >
-          JHIRO'S
-        </motion.div>
-        <div className="text-yellow-400 font-sans tracking-[0.4em] text-xs font-bold uppercase pl-1">
-          Adventure 3D
-        </div>
+      {/* Global Style overrides for Custom Animations */}
+      <style>{`
+        @keyframes pan-bg {
+          0% { transform: scale(1) translate(0, 0); }
+          50% { transform: scale(1.1) translate(-2%, -2%); }
+          100% { transform: scale(1) translate(0, 0); }
+        }
+        @keyframes rune-pulse {
+          0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 165, 0, 0.5)); opacity: 0.1; }
+          50% { filter: drop-shadow(0 0 20px rgba(255, 165, 0, 0.8)); opacity: 0.3; }
+        }
+        .animate-pan { animation: pan-bg 20s ease-in-out infinite; }
+        .animate-rune { animation: rune-pulse 4s ease-in-out infinite; }
+        @keyframes scanline {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+        @keyframes panic-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(255, 165, 0, 0.2); }
+          50% { box-shadow: 0 0 40px rgba(255, 165, 0, 0.5); }
+        }
+        .animate-scanline { animation: scanline 2s linear infinite; }
+        .animate-panic { animation: panic-glow 2s ease-in-out infinite; }
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .animate-shimmer {
+          background: linear-gradient(90deg, #fff 0%, #ff8c00 50%, #fff 100%);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shimmer 3s linear infinite;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+      
+      {/* Background Layer with Parallax-like effect */}
+      <div className="fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute inset-0 animate-pan bg-[url('https://images.unsplash.com/photo-1578632292335-df3abbb0d586?q=80&w=1920&auto=format&fit=crop')] bg-cover bg-center brightness-[0.4] saturate-[1.2]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-transparent to-purple-500/20 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      <div className="w-full max-w-md space-y-8 bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-orange-500/20 shadow-2xl">
-        {/* Name Input */}
-        <div className="space-y-3">
-          <label className="text-[10px] uppercase tracking-widest text-gray-400 pl-1 font-bold">Registro de Explorador</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Escribe tu nombre..."
-              className="flex-1 bg-white/5 border-2 border-orange-500/30 rounded-xl px-4 py-3 text-white focus:border-orange-500 outline-none transition-all font-serif"
-            />
-            <button
-              onClick={startQRScanner}
-              className="p-3 bg-orange-500 rounded-xl text-black hover:bg-orange-400 transition-colors shadow-lg shadow-orange-500/20"
-            >
-              <QrCode size={20} />
-            </button>
+      <div className="relative z-10 min-h-screen flex flex-col items-center p-4 sm:p-10 lg:p-20 overflow-x-hidden">
+        {/* Decorative Floating Elements */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-orange-500/20 blur-[60px] rounded-full animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-500/20 blur-[80px] rounded-full animate-pulse delay-700" />
+        <div className="absolute top-1/2 left-1/4 animate-rune font-serif text-6xl text-white select-none pointer-events-none -rotate-12">∫</div>
+        <div className="absolute top-1/3 right-1/4 animate-rune delay-700 font-serif text-6xl text-white select-none pointer-events-none rotate-12">√</div>
+        <div className="absolute bottom-1/3 left-1/3 animate-rune delay-1000 font-serif text-4xl text-white select-none pointer-events-none rotate-45">π</div>
+        <header className="text-center mb-8 px-4 relative">
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="inline-block px-3 py-1 bg-gradient-to-r from-orange-600 to-red-600 rounded-full text-[8px] sm:text-[10px] font-black tracking-[0.3em] text-white mb-4 shadow-xl shadow-orange-600/40 uppercase"
+          >
+            Nueva Era de Aprendizaje
+          </motion.div>
+          <motion.h1
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-4xl sm:text-7xl md:text-9xl font-serif font-black tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+          >
+            <span className="animate-shimmer">JHIRO'S</span> <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-yellow-300 to-orange-500 italic drop-shadow-none">ADVENTURE</span>
+          </motion.h1>
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <div className="h-[1px] w-8 sm:w-12 bg-gradient-to-r from-transparent to-orange-500/50" />
+            <p className="text-orange-200 font-sans tracking-[0.3em] sm:tracking-[0.5em] text-[7px] sm:text-xs font-black uppercase">
+              El Templo de los Siete Sabios
+            </p>
+            <div className="h-[1px] w-8 sm:w-12 bg-gradient-to-l from-transparent to-orange-500/50" />
           </div>
-          {error && <p className="text-red-500 text-[10px] font-bold pl-1">{error}</p>}
+        </header>
+
+        <div className="w-full max-w-xl bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-12 space-y-6 sm:space-y-10 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+          <div className="space-y-4">
+            <label className="text-[9px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-2">
+              <User size={12} className="text-orange-500" />
+              Ingresa al Santuario
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 group">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Tu Nombre de Héroe"
+                  className="w-full bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-6 sm:py-5 text-white focus:border-orange-500 outline-none transition-all font-serif text-lg sm:text-xl placeholder:text-white/20"
+                />
+                <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+              </div>
+              <button
+                onClick={startQRScanner}
+                className="p-4 sm:p-5 bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl sm:rounded-2xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group"
+                title="Escanear con QR"
+              >
+                <QrCode size={24} className="group-hover:rotate-12 transition-transform" />
+              </button>
+            </div>
+            {error && <p className="text-red-400 text-[10px] font-black animate-shake text-center">{error}</p>}
+          </div>
+
+          <div className="space-y-4">
+            <label className="text-[9px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-2">
+               <Trophy size={12} className="text-yellow-500" />
+               Selecciona tu Destino
+            </label>
+            <div className="grid grid-cols-2 gap-3 sm:gap-5">
+              <button
+                onClick={() => setGender('male')}
+                className={`group relative p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 sm:gap-4 active:scale-95 overflow-hidden ${
+                  gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-110' : 'bg-white/10'}`}>
+                   <Sword size={20} className="sm:size-7" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Guerrero</span>
+                {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
+              </button>
+              <button
+                onClick={() => setGender('female')}
+                className={`group relative p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 sm:gap-4 active:scale-95 overflow-hidden ${
+                  gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-110' : 'bg-white/10'}`}>
+                   <Shield size={20} className="sm:size-7" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Mística</span>
+                {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-4 sm:pt-6">
+            <motion.button
+               whileHover={{ scale: 1.02 }}
+               whileTap={{ scale: 0.98 }}
+               onClick={handleStart}
+               className="w-full py-4 sm:py-6 bg-white text-black rounded-[1.5rem] sm:rounded-[2rem] font-serif text-lg sm:text-2xl font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-4 sm:gap-6 group"
+            >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
+                <Play size={20} fill="currentColor" className="ml-1" />
+              </div>
+              INICIAR CRÓNICA
+            </motion.button>
+          </div>
         </div>
 
-        {/* Character Selection */}
-        <div className="space-y-3">
-          <label className="text-[10px] uppercase tracking-widest text-gray-400 pl-1 font-bold">Elige tu Avatar</label>
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setGender('male')}
-              className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                gender === 'male' ? 'bg-orange-500/20 border-orange-500' : 'bg-white/5 border-white/10 hover:border-white/20'
-              }`}
-            >
-              <Sword size={24} className={gender === 'male' ? 'text-orange-400' : 'text-gray-500'} />
-              <span className="text-xs font-bold text-white">Guerrero</span>
-            </button>
-            <button
-              onClick={() => setGender('female')}
-              className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                gender === 'female' ? 'bg-purple-500/20 border-purple-500' : 'bg-white/5 border-white/10 hover:border-white/20'
-              }`}
-            >
-              <Shield size={24} className={gender === 'female' ? 'text-purple-400' : 'text-gray-500'} />
-              <span className="text-xs font-bold text-white">Hechicera</span>
-            </button>
+        {/* Level Rail - Refined Anime Style */}
+        <div className="w-full max-w-7xl mt-12 sm:mt-20 relative px-4 sm:px-10">
+          <div className="flex items-end justify-between mb-6 sm:mb-8">
+            <div className="space-y-1">
+              <h3 className="text-white font-serif text-2xl sm:text-3xl font-black uppercase tracking-tighter">Expediciones</h3>
+              <div className="h-1 w-16 sm:w-20 bg-orange-600 rounded-full" />
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[8px] sm:text-[10px] text-orange-500 font-black tracking-widest uppercase">Progreso</span>
+              <span className="text-lg sm:text-xl font-mono text-white/80">{unlockedLevels}/{LEVELS.length}</span>
+            </div>
           </div>
-        </div>
-
-        {/* Level Select */}
-        <div className="space-y-3">
-          <label className="text-[10px] uppercase tracking-widest text-gray-400 pl-1 font-bold">Puerta de Inicio</label>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-8 sm:pb-12 snap-x no-scrollbar">
             {LEVELS.map((lv, i) => {
               const unlocked = i < unlockedLevels;
               return (
@@ -137,56 +239,88 @@ export default function StartScreen() {
                   key={lv.id}
                   disabled={!unlocked}
                   onClick={() => setSelectedLevel(i)}
-                  className={`flex-shrink-0 w-16 h-16 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
-                    selectedLevel === i ? 'bg-yellow-500/20 border-yellow-500' : 'bg-white/5 border-white/10'
-                  } ${!unlocked ? 'opacity-30 grayscale' : 'hover:scale-105'}`}
+                  className={`flex-shrink-0 w-48 sm:w-80 aspect-[4/5] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 flex flex-col justify-end relative shadow-2xl transition-all snap-start overflow-hidden group/card ${
+                    selectedLevel === i ? 'ring-2 ring-orange-500 scale-105 z-10' : 'scale-100'
+                  } ${!unlocked ? 'bg-[#120a05] grayscale opacity-40 cursor-not-allowed' : 'bg-black'}`}
                 >
-                  <span className={`text-xl font-black ${selectedLevel === i ? 'text-yellow-400' : 'text-gray-500'}`}>
-                    {unlocked ? i + 1 : '🔒'}
-                  </span>
-                  <span className="text-[8px] uppercase tracking-tighter text-gray-500">{unlocked ? 'Lvl' : 'Cerrado'}</span>
+                  <div className="absolute inset-0 z-0">
+                     <img 
+                       src={`https://picsum.photos/seed/${lv.theme}/600/800`} 
+                       className={`w-full h-full object-cover transition-transform duration-[20s] group-hover/card:scale-125 group-hover/card:rotate-2 ${unlocked ? 'opacity-40 animate-pan group-hover/card:opacity-70' : 'opacity-10'}`} 
+                       referrerPolicy="no-referrer"
+                       alt={lv.name}
+                     />
+                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
+                     {/* Scanline Effect */}
+                     <div className="absolute inset-0 z-10 pointer-events-none opacity-20 group-hover/card:opacity-40 transition-opacity">
+                        <div className="absolute inset-0 h-[2px] bg-white/20 animate-scanline" />
+                     </div>
+                  </div>
+                  
+                  <div className="relative z-10 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                       <span className="w-6 h-[1px] bg-orange-500" />
+                       <span className="text-[10px] text-orange-500 font-black tracking-[0.3em] uppercase">Nivel 0{i + 1}</span>
+                    </div>
+                    <h4 className="text-white font-serif text-2xl sm:text-3xl font-black leading-none uppercase tracking-tighter">{lv.name}</h4>
+                    <p className="text-white/40 text-[10px] font-bold tracking-widest uppercase mb-2">{lv.theme}</p>
+                    
+                    <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5">
+                      <span className="text-[8px] text-orange-200/50 font-black tracking-widest uppercase">
+                        {unlocked ? (selectedLevel === i ? 'Misión Activa' : 'Presiona para explorar') : 'Área Restringida'}
+                      </span>
+                      {unlocked && (
+                        <div className={`p-2 rounded-full transition-colors ${selectedLevel === i ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/40'}`}>
+                           <ChevronRight size={16} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {!unlocked && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                       <div className="p-4 bg-white/5 rounded-full border border-white/10">
+                          <Lock size={32} className="text-white/20" />
+                       </div>
+                    </div>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
-
-        {/* Start Button */}
-        <button
-          onClick={handleStart}
-          className="w-full py-4 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl text-black font-serif text-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-orange-500/20 flex items-center justify-center gap-3"
-        >
-          <Play size={20} fill="currentColor" />
-          INICIAR EXPEDICIÓN
-        </button>
       </div>
 
       {/* QR Modal Overlay */}
-      {scanning && (
-        <div className="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center p-6 backdrop-blur-md">
-          <div className="relative w-full max-w-sm aspect-square border-4 border-orange-500 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(255,165,0,0.3)]">
-            <div id="qr-reader" className="w-full h-full" />
-            <div className="absolute inset-x-0 top-1/2 h-0.5 bg-orange-500 shadow-[0_0_15px_rgba(255,165,0,1)] animate-pulse" />
-          </div>
-          <button
-            onClick={() => {
-              setScanning(false);
-              setPhase('start');
-            }}
-            className="mt-10 px-8 py-3 bg-red-500/20 border border-red-500 text-red-500 rounded-xl font-bold uppercase tracking-widest text-xs hover:bg-red-500 hover:text-white transition-all"
+      <AnimatePresence>
+        {scanning && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl"
           >
-            Cancelar Escaneo
-          </button>
-        </div>
-      )}
+            <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)]">
+              <div id="qr-reader" className="w-full h-full" />
+              <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-pulse" />
+            </div>
+            <button
+              onClick={() => {
+                setScanning(false);
+              }}
+              className="mt-12 px-10 py-4 bg-red-600/20 border-2 border-red-600 text-red-500 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-red-600 hover:text-white transition-all active:scale-95"
+            >
+              Cancelar Escaneo
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Footer Hint */}
-      <div className="absolute bottom-10 flex gap-6 text-gray-500 uppercase tracking-widest text-[9px] font-bold">
-        <span>← → Moverse</span>
-        <span className="text-orange-500/30">|</span>
-        <span>Espacio Saltar</span>
-        <span className="text-orange-500/30">|</span>
-        <span>E Interactuar</span>
+      {/* Desktop Hints - Hidden on mobile */}
+      <div className="hidden lg:flex fixed bottom-10 left-10 gap-8 text-gray-600 uppercase tracking-widest text-[10px] font-black">
+        <div className="flex items-center gap-2"><span className="text-orange-500 bg-orange-500/10 px-2 py-1 rounded-md">WASD</span> MOVERSE</div>
+        <div className="flex items-center gap-2"><span className="text-orange-500 bg-orange-500/10 px-2 py-1 rounded-md">ESPACIO</span> SALTAR</div>
+        <div className="flex items-center gap-2"><span className="text-orange-500 bg-orange-500/10 px-2 py-1 rounded-md">E</span> INTERACTUAR</div>
       </div>
     </motion.div>
   );

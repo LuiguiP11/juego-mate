@@ -26,16 +26,15 @@ function CameraFollow() {
     
     const player = state.scene.getObjectByName('player_group');
     if (player) {
-      // Smoothly move camera behind player
-      // Player is moving along Z negative
+      // Smoothly move camera behind player - Compact scale
       const targetPos = vec.set(
         player.position.x,
-        player.position.y + 4,
-        player.position.z + 6
+        player.position.y + 2.5,
+        player.position.z + 3.5
       );
       
       state.camera.position.lerp(targetPos, 0.1);
-      state.camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
+      state.camera.lookAt(player.position.x, player.position.y + 0.6, player.position.z);
     }
   });
   

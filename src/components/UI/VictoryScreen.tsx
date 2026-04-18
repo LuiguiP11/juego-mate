@@ -81,7 +81,7 @@ export default function VictoryScreen() {
             {isLast ? "¡LEYENDA SUPREMA!" : "¡NIVEL SUPERADO!"}
           </h1>
           <p className="text-yellow-500 font-sans tracking-[0.4em] uppercase text-xs font-bold">
-            Tesoro Reclamado
+            Ascensión Lograda
           </p>
         </header>
 
@@ -92,7 +92,7 @@ export default function VictoryScreen() {
               <span className="text-lg font-bold text-white">{playerName || 'Anónimo'}</span>
             </div>
             <div className="flex flex-col items-center p-4 bg-black/40 rounded-2xl border border-white/5">
-              <span className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Tesoro</span>
+              <span className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Artefacto</span>
               <span className="text-lg font-bold text-yellow-500">{level.treasure}</span>
             </div>
           </div>
@@ -117,18 +117,17 @@ export default function VictoryScreen() {
             {isLast ? "Finalizar Expedición" : "Siguiente Nivel"}
             <ArrowRight size={24} />
           </button>
-          {!isLast && (
-             <button
-              onClick={() => setPhase('certificate')}
-              className="flex-1 py-4 bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/50 rounded-2xl font-serif text-xl font-bold flex items-center justify-center gap-3 hover:bg-yellow-500/30 transition-all"
-            >
-              <Award size={24} />
-              Ver Certificado
-            </button>
-          )}
+          <button
+            onClick={() => setPhase('certificate')}
+            className="flex-1 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-serif text-xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-xl shadow-orange-600/20"
+          >
+            <Award size={24} />
+            Obtener Certificado
+          </button>
           <button
             onClick={resetGame}
-            className="p-4 bg-white/5 text-gray-400 rounded-2xl border border-white/10 hover:bg-white/10 transition-all"
+            className="p-4 bg-white/5 text-gray-400 rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center"
+            title="Reiniciar"
           >
             <Home size={24} />
           </button>

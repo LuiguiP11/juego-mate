@@ -5,12 +5,12 @@
 
 import { useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Download, Printer, Home, Share2 } from 'lucide-react';
+import { Download, Printer, Home, Share2, ArrowRight } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 
 export default function CertificateScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { playerName, currentLevel, score, lives, resetGame } = useGameStore();
+  const { playerName, currentLevel, score, lives, resetGame, nextLevel, totalPoints } = useGameStore();
   const level = LEVELS[currentLevel];
 
   useEffect(() => {
@@ -69,16 +69,32 @@ export default function CertificateScreen() {
     // Achievement
     ctx.fillStyle = '#ccc';
     ctx.font = '20px sans-serif';
-    ctx.fillText('Ha superado los desafíos ancestrales del', W / 2, 340);
+    ctx.fillText(`Ha superado los desafíos ancestrales del NIVEL ${currentLevel + 1}:`, W / 2, 340);
     
     ctx.fillStyle = '#ffa500';
-    ctx.font = 'bold 28px serif';
-    ctx.fillText(level.name.toUpperCase(), W / 2, 380);
+    ctx.font = 'bold 32px serif';
+    ctx.fillText(level.name.toUpperCase(), W / 2, 385);
 
     // Stats
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.font = '14px monospace';
-    ctx.fillText(`PUNTUACIÓN: ${score}/5  |  VIDAS: ${lives}  |  FECHA: ${new Date().toLocaleDateString()}`, W / 2, 450);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`PUNTOS ACUMULADOS: ${totalPoints} PTS`, W / 2, 440);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(`LOGRO: 2 PUNTOS POR NIVEL  |  VIDAS RESTANTES: ${lives}`, W / 2, 470);
+
+    // Inventory
+    const inventory = useGameStore.getState().inventory;
+    if (inventory.length > 0) {
+        ctx.fillStyle = '#39ff14';
+        ctx.font = 'italic 12px monospace';
+        ctx.fillText(`COLECCIÓN: ${inventory.join(' • ')}`, W / 2, 500);
+    }
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '10px monospace';
+    ctx.fillText(`FECHA DE EXPEDICIÓN: ${new Date().toLocaleDateString()}  |  ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}`, W / 2, 510);
 
     // Badge
     ctx.beginPath();
@@ -138,27 +154,34 @@ export default function CertificateScreen() {
           </div>
         </motion.div>
 
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 w-full">
           <button
             onClick={download}
-            className="flex items-center gap-3 px-8 py-4 bg-yellow-500 text-black rounded-2xl font-black uppercase text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-yellow-500/20"
+            className="flex-1 min-w-[160px] flex items-center justify-center gap-3 px-6 py-4 bg-yellow-500 text-black rounded-2xl font-black uppercase text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-yellow-500/20"
           >
-            <Download size={20} />
-            Descargar Imagen
+            <Download size={18} />
+            Imagen
           </button>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-3 px-8 py-4 bg-white/10 text-white rounded-2xl border border-white/20 font-black uppercase text-sm hover:bg-white/20 transition-all"
+            className="flex-1 min-w-[160px] flex items-center justify-center gap-3 px-6 py-4 bg-white/10 text-white rounded-2xl border border-white/20 font-black uppercase text-xs sm:text-sm hover:bg-white/20 transition-all"
           >
-            <Printer size={20} />
+            <Printer size={18} />
             Imprimir
           </button>
           <button
-            onClick={resetGame}
-            className="flex items-center gap-3 px-8 py-4 bg-orange-500/20 text-orange-400 rounded-2xl border border-orange-500/30 font-black uppercase text-sm hover:bg-orange-500 hover:text-black transition-all"
+            onClick={nextLevel}
+            className="w-full sm:flex-[2] flex items-center justify-center gap-3 px-8 py-5 bg-orange-600 text-white rounded-2xl font-black uppercase text-sm sm:text-base hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-600/30 ring-2 ring-orange-400/20"
           >
-            <Home size={20} />
-            Menú Principal
+            <ArrowRight size={22} />
+            {currentLevel < LEVELS.length - 1 ? 'Siguiente Nivel' : 'Finalizar Crónica'}
+          </button>
+          <button
+            onClick={resetGame}
+            className="flex-1 min-w-[120px] flex items-center justify-center gap-3 px-6 py-4 bg-white/5 text-gray-400 rounded-2xl border border-white/10 font-black uppercase text-xs hover:bg-white/10 transition-all"
+          >
+            <Home size={18} />
+            Inicio
           </button>
         </div>
       </div>
