@@ -26,15 +26,15 @@ function CameraFollow() {
     
     const player = state.scene.getObjectByName('player_group');
     if (player) {
-      // Smoothly move camera behind player - Compact scale
+      // Smoothly move camera behind player - Adjusted for better visibility
       const targetPos = vec.set(
         player.position.x,
-        player.position.y + 2.5,
-        player.position.z + 3.5
+        player.position.y + 3.5,
+        player.position.z + 5.5
       );
       
       state.camera.position.lerp(targetPos, 0.1);
-      state.camera.lookAt(player.position.x, player.position.y + 0.6, player.position.z);
+      state.camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z);
     }
   });
   
@@ -59,7 +59,7 @@ export default function GameCanvas() {
       <div className="w-full h-full bg-black">
         <Canvas gl={{ antialias: true }}>
           <Suspense fallback={null}>
-            <PerspectiveCamera makeDefault position={[0, 4, 8]} fov={60} />
+            <PerspectiveCamera makeDefault position={[0, 5, 10]} fov={75} />
             <CameraFollow />
             
             <World />

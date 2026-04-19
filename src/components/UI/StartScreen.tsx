@@ -111,13 +111,10 @@ export default function StartScreen() {
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center p-4 sm:p-10 lg:p-20 overflow-x-hidden">
+      <div className="relative z-10 min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8 overflow-x-hidden">
         {/* Decorative Floating Elements */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-orange-500/20 blur-[60px] rounded-full animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-500/20 blur-[80px] rounded-full animate-pulse delay-700" />
-        <div className="absolute top-1/2 left-1/4 animate-rune font-serif text-6xl text-white select-none pointer-events-none -rotate-12">∫</div>
-        <div className="absolute top-1/3 right-1/4 animate-rune delay-700 font-serif text-6xl text-white select-none pointer-events-none rotate-12">√</div>
-        <div className="absolute bottom-1/3 left-1/3 animate-rune delay-1000 font-serif text-4xl text-white select-none pointer-events-none rotate-45">π</div>
+        <div className="absolute top-20 left-10 w-24 h-24 bg-orange-500/20 blur-[60px] rounded-full animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-32 h-32 bg-purple-500/20 blur-[80px] rounded-full animate-pulse delay-700" />
         <header className="text-center mb-8 px-4 relative">
           <motion.div
             initial={{ y: -20, opacity: 0 }}
@@ -143,10 +140,10 @@ export default function StartScreen() {
           </div>
         </header>
 
-        <div className="w-full max-w-lg bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-8 space-y-4 sm:space-y-8 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-          <div className="space-y-3">
-            <label className="text-[8px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
-              <User size={10} className="text-orange-500" />
+        <div className="w-full max-w-md bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[1.2rem] sm:rounded-[1.5rem] p-4 sm:p-6 space-y-4 sm:space-y-6 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+          <div className="space-y-2">
+            <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+              <User size={8} className="text-orange-500" />
               Ingresa al Santuario
             </label>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -156,82 +153,80 @@ export default function StartScreen() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Tu Nombre de Héroe"
-                  className="w-full bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl px-4 py-2 sm:px-5 sm:py-3 text-white focus:border-orange-500 outline-none transition-all font-serif text-base sm:text-lg placeholder:text-white/20"
+                  className="w-full bg-white/5 border-2 border-white/10 rounded-xl px-4 py-2 text-white focus:border-orange-500 outline-none transition-all font-serif text-sm sm:text-base placeholder:text-white/20"
                 />
-                <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                <div className="absolute inset-0 rounded-xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
               </div>
               <button
                 onClick={startQRScanner}
-                className="p-4 sm:p-5 bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl sm:rounded-2xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group"
+                className="p-3 bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group"
                 title="Escanear con QR"
               >
-                <QrCode size={24} className="group-hover:rotate-12 transition-transform" />
+                <QrCode size={20} className="group-hover:rotate-12 transition-transform" />
               </button>
             </div>
-            {error && <p className="text-red-400 text-[10px] font-black animate-shake text-center">{error}</p>}
+            {error && <p className="text-red-400 text-[9px] font-black animate-shake text-center">{error}</p>}
           </div>
 
-          <div className="space-y-3">
-            <label className="text-[8px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
-               <Trophy size={10} className="text-yellow-500" />
+          <div className="space-y-2">
+            <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+               <Trophy size={8} className="text-yellow-500" />
                Selecciona tu Destino
             </label>
-            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               <button
                 onClick={() => setGender('male')}
-                className={`group relative p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border-2 transition-all flex flex-col items-center gap-2 active:scale-95 overflow-hidden ${
+                className={`group relative p-2 sm:p-3 rounded-[1rem] border-2 transition-all flex flex-col items-center gap-1.5 active:scale-95 overflow-hidden ${
                   gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
                 }`}
               >
-                <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-110' : 'bg-white/10'}`}>
-                   <Sword size={16} className="sm:size-6" />
+                <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-110' : 'bg-white/10'}`}>
+                   <Sword size={14} className="sm:size-5" />
                 </div>
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Guerrero</span>
-                {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
+                <span className="text-[8px] font-black uppercase tracking-[0.2em]">Guerrero</span>
               </button>
               <button
                 onClick={() => setGender('female')}
-                className={`group relative p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border-2 transition-all flex flex-col items-center gap-2 active:scale-95 overflow-hidden ${
+                className={`group relative p-2 sm:p-3 rounded-[1rem] border-2 transition-all flex flex-col items-center gap-1.5 active:scale-95 overflow-hidden ${
                   gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
                 }`}
               >
-                <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-110' : 'bg-white/10'}`}>
-                   <Shield size={16} className="sm:size-6" />
+                <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-110' : 'bg-white/10'}`}>
+                   <Shield size={14} className="sm:size-5" />
                 </div>
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Mística</span>
-                {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
+                <span className="text-[8px] font-black uppercase tracking-[0.2em]">Mística</span>
               </button>
             </div>
           </div>
 
-          <div className="pt-2 sm:pt-4">
+          <div className="pt-2">
             <motion.button
                whileHover={{ scale: 1.02 }}
                whileTap={{ scale: 0.98 }}
                onClick={handleStart}
-               className="w-full py-3 sm:py-4 bg-white text-black rounded-[1.2rem] sm:rounded-[1.5rem] font-serif text-base sm:text-lg font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-3 sm:gap-4 group"
+               className="w-full py-2.5 sm:py-3 bg-white text-black rounded-[1rem] font-serif text-sm sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 sm:gap-3 group"
             >
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
-                <Play size={14} fill="currentColor" className="ml-1" />
+              <div className="w-5 h-5 sm:w-7 sm:h-7 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
+                <Play size={12} fill="currentColor" className="ml-1" />
               </div>
               INICIAR CRÓNICA
             </motion.button>
           </div>
         </div>
 
-        {/* Level Rail - Refined Anime Style - Compacted */}
-        <div className="w-full max-w-5xl mt-8 sm:mt-12 relative px-4 sm:px-8">
-          <div className="flex items-end justify-between mb-4 sm:mb-6">
-            <div className="space-y-1">
-              <h3 className="text-white font-serif text-lg sm:text-2xl font-black uppercase tracking-tighter">Expediciones</h3>
-              <div className="h-0.5 w-12 sm:w-16 bg-orange-600 rounded-full" />
+        {/* Level Rail - Compacted */}
+        <div className="w-full max-w-4xl mt-6 sm:mt-8 relative px-4 sm:px-6">
+          <div className="flex items-end justify-between mb-3 sm:mb-4">
+            <div className="space-y-0.5">
+              <h3 className="text-white font-serif text-base sm:text-xl font-black uppercase tracking-tighter">Expediciones</h3>
+              <div className="h-0.5 w-8 sm:w-12 bg-orange-600 rounded-full" />
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-[7px] sm:text-[9px] text-orange-500 font-black tracking-widest uppercase">Progreso</span>
-              <span className="text-sm sm:text-base font-mono text-white/80">{unlockedLevels}/{LEVELS.length}</span>
+              <span className="text-[6px] sm:text-[8px] text-orange-500 font-black tracking-widest uppercase">Progreso</span>
+              <span className="text-xs sm:text-sm font-mono text-white/80">{unlockedLevels}/{LEVELS.length}</span>
             </div>
           </div>
-          <div className="flex gap-3 sm:gap-5 overflow-x-auto pb-6 sm:pb-10 snap-x no-scrollbar">
+          <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 sm:pb-6 snap-x no-scrollbar">
             {LEVELS.map((lv, i) => {
               const unlocked = i < unlockedLevels;
               return (
@@ -239,7 +234,7 @@ export default function StartScreen() {
                   key={lv.id}
                   disabled={!unlocked}
                   onClick={() => setSelectedLevel(i)}
-                  className={`flex-shrink-0 w-40 sm:w-64 aspect-[4/5] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 flex flex-col justify-end relative shadow-2xl transition-all snap-start overflow-hidden group/card ${
+                  className={`flex-shrink-0 w-32 sm:w-48 aspect-[4/5] rounded-[1.2rem] sm:rounded-[1.5rem] p-3 sm:p-4 flex flex-col justify-end relative shadow-2xl transition-all snap-start overflow-hidden group/card ${
                     selectedLevel === i ? 'ring-2 ring-orange-500 scale-105 z-10' : 'scale-100'
                   } ${!unlocked ? 'bg-[#120a05] grayscale opacity-40 cursor-not-allowed' : 'bg-black'}`}
                 >
