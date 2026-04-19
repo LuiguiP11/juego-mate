@@ -61,7 +61,10 @@ export default function Player() {
     timeRef.current += delta;
     const time = timeRef.current;
 
-    const { forward, backward, left, right, jump, interact } = getKeys();
+    const { forward, backward, left, right, jump: kbJump, interact: kbInteract } = getKeys();
+    const { joystick, jumpPressed, interactPressed } = useGameStore.getState();
+    const jump = kbJump || jumpPressed;
+    const interact = kbInteract || interactPressed;
     const gates = useGameStore.getState().score; // Number of solved gates
 
     // Interaction check
@@ -72,10 +75,16 @@ export default function Player() {
     // Horizontal Movement
     let dx = 0;
     let dz = 0;
-    if (forward) dz -= MOVE_SPEED;
-    if (backward) dz += MOVE_SPEED * 0.6;
-    if (left) dx -= MOVE_SPEED * 0.7;
-    if (right) dx += MOVE_SPEED * 0.7;
+
+    if (joystick.active) {
+      dx = joystick.x * MOVE_SPEED;
+      dz = joystick.y * MOVE_SPEED;
+    } else {
+      if (forward) dz -= MOVE_SPEED;
+      if (backward) dz += MOVE_SPEED * 0.6;
+      if (left) dx -= MOVE_SPEED * 0.7;
+      if (right) dx += MOVE_SPEED * 0.7;
+    }
 
     velocity.current.x = dx;
     velocity.current.z = dz;

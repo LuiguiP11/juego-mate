@@ -5,8 +5,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, DoorOpen, User, Trophy, MapPin, RefreshCcw, Volume2, VolumeX } from 'lucide-react';
+import { Heart, DoorOpen, User, Trophy, MapPin, RefreshCcw, Volume2, VolumeX, Zap } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
+import Joystick from './Joystick';
 import StartScreen from './StartScreen';
 import IntroScreen from './IntroScreen';
 import PuzzleOverlay from './PuzzleOverlay';
@@ -14,6 +15,44 @@ import GameOverScreen from './GameOverScreen';
 import VictoryScreen from './VictoryScreen';
 import CertificateScreen from './CertificateScreen';
 import ControlsHint from './ControlsHint';
+
+function MobileControls() {
+  const { phase, setJump, setInteract, nearGateIndex, setPhase } = useGameStore();
+
+  if (phase !== 'playing') return null;
+
+  return (
+    <div className="fixed bottom-10 right-10 z-[100] flex flex-col items-center gap-4 pointer-events-auto sm:hidden">
+      {/* Interact Button (contextual) */}
+      <AnimatePresence>
+        {nearGateIndex !== null && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            onClick={() => setPhase('puzzle')}
+            className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-[0_6px_0_rgb(30,64,175)] active:translate-y-1 active:shadow-none transition-all"
+          >
+            <Zap size={32} fill="white" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Jump Button */}
+      <button
+        onTouchStart={() => setJump(true)}
+        onTouchEnd={() => setJump(false)}
+        onMouseDown={() => setJump(true)}
+        onMouseUp={() => setJump(false)}
+        className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white shadow-[0_8px_0_rgb(154,52,18)] active:translate-y-1 active:shadow-none transition-all"
+      >
+        <div className="w-10 h-10 border-4 border-white/40 rounded-full flex items-center justify-center">
+           <div className="w-4 h-4 bg-white rounded-full" />
+        </div>
+      </button>
+    </div>
+  );
+}
 
 function HUD() {
   const { lives, score, playerName, currentLevel, phase, retries, nearGateIndex, setPhase, muted, toggleMute, inventory, totalPoints } = useGameStore();
@@ -23,6 +62,8 @@ function HUD() {
 
   return (
     <div className="fixed inset-x-0 top-0 z-50 pointer-events-none h-full">
+      <Joystick />
+      <MobileControls />
       {/* Top Bar - Compact version */}
       <div className="flex items-center justify-between px-3 md:px-6 py-1 md:py-2 bg-black/60 backdrop-blur-md border-b border-orange-500/30 pointer-events-auto">
         <div className="flex items-center gap-2 md:gap-4">
@@ -76,28 +117,25 @@ function HUD() {
         </div>
       </div>
 
-      {/* Interact Hint / Mobile Button */}
+      {/* Interact Hint / Desktop Hint */}
       <AnimatePresence>
         {phase === 'playing' && nearGateIndex !== null && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-2"
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-2"
           >
             <div className="px-4 py-2 bg-black/80 backdrop-blur-xl border border-orange-500 rounded-xl flex items-center gap-4 shadow-[0_0_20px_rgba(249,115,22,0.4)]">
                <div className="flex flex-col">
                   <span className="text-[10px] text-orange-400 font-black uppercase tracking-widest leading-none">¡SIGILO ACTIVADO!</span>
                   <span className="text-white text-sm font-black tracking-tight underline decoration-orange-500">PÁRATE EN EL CÍRCULO</span>
                </div>
-               <button 
-                onClick={() => setPhase('puzzle')}
-                className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center text-white text-lg sm:text-xl font-black shadow-[0_4px_0_rgb(154,52,18)] transition-transform active:translate-y-1 active:shadow-none"
-               >
+               <div className="hidden sm:flex w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg items-center justify-center text-white text-lg sm:text-xl font-black shadow-[0_4px_0_rgb(154,52,18)]">
                  E
-               </button>
+               </div>
             </div>
-            <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Presiona 'E' o toca el cuadro</p>
+            <p className="hidden sm:block text-[8px] text-gray-500 uppercase font-bold tracking-widest">Presiona 'E' para interactuar</p>
           </motion.div>
         )}
       </AnimatePresence>

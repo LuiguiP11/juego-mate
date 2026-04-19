@@ -37,9 +37,15 @@ interface GameState {
   inventory: string[];
   muted: boolean;
   totalPoints: number;
+  joystick: { x: number; y: number; active: boolean };
+  jumpPressed: boolean;
+  interactPressed: boolean;
   
   // Actions
   setPhase: (phase: GamePhase) => void;
+  setJoystick: (x: number, y: number, active: boolean) => void;
+  setJump: (pressed: boolean) => void;
+  setInteract: (pressed: boolean) => void;
   setPlayerInfo: (name: string, user: string, grade: string) => void;
   setGender: (gender: 'male' | 'female') => void;
   setNearGate: (index: number | null) => void;
@@ -126,10 +132,19 @@ export const useGameStore = create<GameState>((set, get) => ({
   inventory: [],
   muted: false,
   totalPoints: 0,
+  joystick: { x: 0, y: 0, active: false },
+  jumpPressed: false,
+  interactPressed: false,
 
   setPhase: (phase) => set({ phase }),
+
+  setJoystick: (x, y, active) => set({ joystick: { x, y, active } }),
+
+  setJump: (pressed) => set({ jumpPressed: pressed }),
+
+  setInteract: (pressed) => set({ interactPressed: pressed }),
   
-  setPlayerInfo: (name, user, grade) => set({ playerName: name, playerUser: user, playerGrade: grade }),
+  setPlayerInfo: (name, user, grade) => set({ playerName: name, playerUser: user, grade }),
   
   setGender: (gender) => set({ gender }),
   

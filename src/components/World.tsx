@@ -6,8 +6,35 @@
 import { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { PointLight, Color, AdditiveBlending } from 'three';
-import { Text, Float, Sparkles } from '@react-three/drei';
+import { Text, Float, Sparkles, Stars } from '@react-three/drei';
 import { LEVELS, useGameStore } from '../store';
+
+function FloatingBook({ position }: { position: [number, number, number] }) {
+  const meshRef = useRef<any>(null);
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += 0.01;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={1.5} floatIntensity={1}>
+      <group position={position}>
+        {/* Book Cover */}
+        <mesh ref={meshRef} castShadow>
+          <boxGeometry args={[0.3, 0.4, 0.05]} />
+          <meshStandardMaterial color="#8b4513" />
+          {/* Pages */}
+          <mesh position={[0, 0, 0.026]}>
+            <boxGeometry args={[0.25, 0.35, 0.01]} />
+            <meshStandardMaterial color="#fffce0" />
+          </mesh>
+        </mesh>
+        <pointLight intensity={1} distance={3} color="#ffd700" />
+      </group>
+    </Float>
+  );
+}
 
 function Torch({ position }: { position: [number, number, number] }) {
   const lightRef = useRef<PointLight>(null);
@@ -395,7 +422,7 @@ function Spikes({ position }: { position: [number, number, number] }) {
   );
 }
 
-function Prop({ type, position }: { type: 'vase' | 'crate' | 'barrel' | 'pillar', position: [number, number, number] }) {
+function Prop({ type, position, theme }: { type: 'vase' | 'crate' | 'barrel' | 'pillar' | 'bookcase' | 'crystal', position: [number, number, number], theme?: string }) {
   return (
     <group position={position}>
       {type === 'vase' && (
@@ -412,12 +439,42 @@ function Prop({ type, position }: { type: 'vase' | 'crate' | 'barrel' | 'pillar'
         <mesh castShadow scale={0.7}>
           <boxGeometry args={[0.6, 0.6, 0.6]} />
           <meshPhongMaterial color="#5d4037" />
-          {/* Crate lines */}
           <mesh position={[0, 0, 0.31]}>
              <boxGeometry args={[0.5, 0.05, 0.01]} />
              <meshBasicMaterial color="#3e2723" />
           </mesh>
         </mesh>
+      )}
+      {type === 'bookcase' && (
+        <group scale={0.8}>
+          <mesh castShadow>
+            <boxGeometry args={[1.2, 2, 0.4]} />
+            <meshStandardMaterial color="#3d2b1f" />
+          </mesh>
+          {[...Array(8)].map((_, i) => (
+            <mesh key={i} position={[(i % 3 - 1) * 0.3, (Math.floor(i/3) - 0.5) * 0.6, 0.15]}>
+              <boxGeometry args={[0.1, 0.4, 0.3]} />
+              <meshStandardMaterial color={['#ff4444', '#4444ff', '#44ff44', '#ffff44', '#ff44ff', '#44ffff'][i % 6]} />
+            </mesh>
+          ))}
+        </group>
+      )}
+      {type === 'crystal' && (
+        <Float speed={2} rotationIntensity={1} floatIntensity={0.5}>
+          <mesh castShadow rotation={[Math.random(), Math.random(), 0]}>
+            <octahedronGeometry args={[0.4]} />
+            <meshStandardMaterial 
+              color={theme === 'crystal' ? "#FF69B4" : "#00ffff"} 
+              emissive={theme === 'crystal' ? "#FF69B4" : "#00BFFF"} 
+              emissiveIntensity={2} 
+              transparent 
+              opacity={0.8} 
+              metalness={1} 
+              roughness={0} 
+            />
+          </mesh>
+          <pointLight intensity={2} color={theme === 'crystal' ? "#FF69B4" : "#00ffff"} distance={5} />
+        </Float>
       )}
       {type === 'pillar' && (
         <mesh castShadow>
@@ -472,12 +529,12 @@ function Particles({ count = 80, theme }: { count?: number, theme: string }) {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={theme === 'water' ? 0.08 : theme === 'crystal' ? 0.1 : 0.04}
+        size={theme === 'water' ? 0.08 : theme === 'crystal' ? 0.12 : 0.04}
         color={
           theme === 'water' ? '#00eeff' : 
-          theme === 'crystal' ? '#ff00ff' : 
-          theme === 'abyss' ? '#55ccff' : 
-          theme === 'library' ? '#ffcc00' : 
+          theme === 'crystal' ? '#FF69B4' : 
+          theme === 'abyss' ? '#00BFFF' : 
+          theme === 'library' ? '#ffd700' : 
           '#ffffff'
         }
         transparent
@@ -504,18 +561,27 @@ export default function World() {
   const gateSpacing = 8;
   
   // Custom props distribution based on level
-  const { props, traps } = useMemo(() => {
+  const { props, traps, extraDecor } = useMemo(() => {
     const pList: { type: any, pos: [number, number, number] }[] = [];
     const tList: { type: 'pendulum' | 'spikes', pos: [number, number, number] }[] = [];
+    const dList: { type: 'book', pos: [number, number, number] }[] = [];
     
-    for(let i = 0; i < 15; i++) {
+    for(let i = 0; i < 18; i++) {
         const side = Math.random() > 0.5 ? 1 : -1;
         const z = -Math.random() * 50 - 5;
-        const x = side * (3.2 + Math.random() * 0.5);
+        const x = side * (3.0 + Math.random() * 0.8);
         let type: any = Math.random() > 0.6 ? 'vase' : 'crate';
-        if (isLibrary) type = Math.random() > 0.7 ? 'pillar' : 'crate';
-        if (isCrystal) type = Math.random() > 0.5 ? 'pillar' : 'vase';
-        pList.push({ type, pos: [x, type === 'pillar' ? 3.5 : 0.3, z] });
+        
+        if (isLibrary) {
+            type = Math.random() > 0.4 ? 'bookcase' : 'pillar';
+            if (Math.random() > 0.5) {
+                dList.push({ type: 'book', pos: [(Math.random() - 0.5) * 4, 1 + Math.random() * 2, z] });
+            }
+        }
+        if (isCrystal) type = Math.random() > 0.3 ? 'crystal' : 'pillar';
+        if (isAbyss) type = 'crystal'; // Floating crystals in abyss
+
+        pList.push({ type, pos: [x, (type === 'pillar' || type === 'bookcase') ? 3.5 : 0.3, z] });
     }
 
     // Traps placement based on level difficulty
@@ -529,7 +595,7 @@ export default function World() {
         }
     }
 
-    return { props: pList, traps: tList };
+    return { props: pList, traps: tList, extraDecor: dList };
   }, [currentLevelIdx, level.theme, isWater, isLibrary, isCrystal, isAbyss]);
 
   return (
@@ -544,26 +610,27 @@ export default function World() {
         castShadow 
         shadow-mapSize={[1024, 1024]}
       />
-      <pointLight position={[0, 15, -20]} intensity={2.5} color={isCrystal ? "#cc88ff" : isAbyss ? "#66ccff" : "#fff1d0"} />
+      <pointLight position={[0, 15, -20]} intensity={2.5} color={isCrystal ? "#FF69B4" : isAbyss ? "#00BFFF" : "#fff1d0"} />
 
       {/* Floor */}
       {isWater ? (
         <WaterFloor color="#0a3a6a" corridorLen={corridorLen} corridorW={corridorW} />
       ) : isAbyss ? (
          <group>
+            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
             {/* Narrow path for Abyss */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, -corridorLen / 2 + 2]} receiveShadow>
-                <planeGeometry args={[3, corridorLen]} />
+                <planeGeometry args={[2.5, corridorLen]} />
                 <meshStandardMaterial color="#050505" roughness={0.1} metalness={0.8} />
             </mesh>
             {/* Glowing path edges */}
-            <mesh position={[-1.5, 0.05, -corridorLen / 2 + 2]} rotation={[-Math.PI/2, 0, 0]}>
-               <planeGeometry args={[0.05, corridorLen]} />
-               <meshBasicMaterial color="#00ffff" />
+            <mesh position={[-1.25, 0.05, -corridorLen / 2 + 2]} rotation={[-Math.PI/2, 0, 0]}>
+               <planeGeometry args={[0.06, corridorLen]} />
+               <meshBasicMaterial color="#00BFFF" />
             </mesh>
-            <mesh position={[1.5, 0.05, -corridorLen / 2 + 2]} rotation={[-Math.PI/2, 0, 0]}>
-               <planeGeometry args={[0.05, corridorLen]} />
-               <meshBasicMaterial color="#00ffff" />
+            <mesh position={[1.25, 0.05, -corridorLen / 2 + 2]} rotation={[-Math.PI/2, 0, 0]}>
+               <planeGeometry args={[0.06, corridorLen]} />
+               <meshBasicMaterial color="#00BFFF" />
             </mesh>
          </group>
       ) : isCrystal ? (
@@ -573,7 +640,7 @@ export default function World() {
             color="#220044" 
             roughness={0.05}
             metalness={0.9}
-            emissive="#4400aa"
+            emissive="#FF69B4"
             emissiveIntensity={0.2}
           />
         </mesh>
@@ -594,7 +661,8 @@ export default function World() {
       ))}
 
       {/* Decorative Props */}
-      {props.map((p, i) => <Prop key={i} type={p.type} position={p.pos} />)}
+      {props.map((p, i) => <Prop key={i} type={p.type} position={p.pos} theme={level.theme} />)}
+      {isLibrary && extraDecor.map((d, i) => <FloatingBook key={i} position={d.pos} />)}
 
       {/* Corridor Structure */}
       {[...Array(12)].map((_, i) => (
@@ -608,7 +676,7 @@ export default function World() {
             ) : isCrystal ? (
                 <mesh position={[0, 6.8, 0]}>
                     <boxGeometry args={[corridorW, 0.2, 0.2]} />
-                    <meshStandardMaterial color="#8800ff" emissive="#5500aa" />
+                    <meshStandardMaterial color="#FF69B4" emissive="#FF69B4" />
                 </mesh>
             ) : null}
             <mesh position={[-1.9, 3.5, 0]} castShadow receiveShadow>
@@ -620,7 +688,7 @@ export default function World() {
                 <meshPhongMaterial color={isCrystal ? "#2a0055" : "#1a1a1a"} />
             </mesh>
             {isCrystal && (
-                <pointLight position={[0, 4, 0]} intensity={0.5} color="#8800ff" distance={8} />
+                <pointLight position={[0, 4, 0]} intensity={0.5} color="#FF69B4" distance={8} />
             )}
         </group>
       ))}
