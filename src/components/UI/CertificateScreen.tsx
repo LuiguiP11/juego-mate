@@ -124,63 +124,63 @@ export default function CertificateScreen() {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-8 overflow-y-auto pointer-events-auto"
     >
-      <div className="max-w-4xl w-full flex flex-col items-center gap-10">
-        <header className="text-center space-y-4">
+      <div className="max-w-3xl w-full flex flex-col items-center gap-6">
+        <header className="text-center space-y-2">
           <motion.div
             initial={{ y: -20 }}
             animate={{ y: 0 }}
-            className="flex items-center justify-center gap-3 text-yellow-400"
+            className="flex items-center justify-center gap-2 text-yellow-400"
           >
-            <Trophy size={40} />
-            <h1 className="text-3xl md:text-5xl font-serif font-black tracking-tight">¡HONOR Y GLORIA!</h1>
+            <Trophy size={32} />
+            <h1 className="text-2xl md:text-3xl font-serif font-black tracking-tight">¡HONOR Y GLORIA!</h1>
           </motion.div>
-          <p className="text-gray-400 font-sans tracking-widest text-sm uppercase">Reclama tu pergamino de reconocimiento</p>
+          <p className="text-gray-400 font-sans tracking-widest text-[10px] uppercase">Reclama tu pergamino de reconocimiento</p>
         </header>
 
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 20 }}
-          className="relative bg-black rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(255,215,0,0.15)] group"
+          className="relative bg-black rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(255,215,0,0.15)] group"
         >
           <canvas 
             ref={canvasRef} 
             width={800} 
             height={550} 
-            className="w-full h-auto max-w-full block"
+            className="w-full h-auto max-w-[600px] block"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-8 p-4">
-            <p className="text-white/60 text-[10px] uppercase font-bold tracking-[0.3em]">Certificado Digital Autenticado</p>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4 p-2">
+            <p className="text-white/60 text-[8px] uppercase font-bold tracking-[0.3em]">Certificado Digital Autenticado</p>
           </div>
         </motion.div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 w-full">
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 w-full">
           <button
             onClick={download}
-            className="flex-1 min-w-[160px] flex items-center justify-center gap-3 px-6 py-4 bg-yellow-500 text-black rounded-2xl font-black uppercase text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-yellow-500/20"
+            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-yellow-500 text-black rounded-xl font-black uppercase text-[10px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-yellow-500/20"
           >
-            <Download size={18} />
+            <Download size={16} />
             Imagen
           </button>
           <button
             onClick={() => window.print()}
-            className="flex-1 min-w-[160px] flex items-center justify-center gap-3 px-6 py-4 bg-white/10 text-white rounded-2xl border border-white/20 font-black uppercase text-xs sm:text-sm hover:bg-white/20 transition-all"
+            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-3 bg-white/10 text-white rounded-xl border border-white/20 font-black uppercase text-[10px] hover:bg-white/20 transition-all"
           >
-            <Printer size={18} />
+            <Printer size={16} />
             Imprimir
           </button>
           <button
             onClick={nextLevel}
-            className="w-full sm:flex-[2] flex items-center justify-center gap-3 px-8 py-5 bg-orange-600 text-white rounded-2xl font-black uppercase text-sm sm:text-base hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-600/30 ring-2 ring-orange-400/20"
+            className="w-full sm:flex-[2] flex items-center justify-center gap-2 px-6 py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs sm:text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-600/30 ring-2 ring-orange-400/20"
           >
-            <ArrowRight size={22} />
+            <ArrowRight size={18} />
             {currentLevel < LEVELS.length - 1 ? 'Siguiente Nivel' : 'Finalizar Crónica'}
           </button>
           <button
             onClick={resetGame}
-            className="flex-1 min-w-[120px] flex items-center justify-center gap-3 px-6 py-4 bg-white/5 text-gray-400 rounded-2xl border border-white/10 font-black uppercase text-xs hover:bg-white/10 transition-all"
+            className="flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-3 bg-white/5 text-gray-400 rounded-xl border border-white/10 font-black uppercase text-[9px] hover:bg-white/10 transition-all"
           >
-            <Home size={18} />
+            <Home size={16} />
             Inicio
           </button>
         </div>

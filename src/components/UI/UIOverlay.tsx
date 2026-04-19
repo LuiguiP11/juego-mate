@@ -43,12 +43,8 @@ function HUD() {
           </div>
 
           <div className="flex flex-col border-l border-white/10 pl-2">
-            <span className="text-[7px] md:text-[9px] uppercase tracking-wider text-gray-500 font-bold leading-none">Retry</span>
-            <div className="flex gap-1">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < retries ? 'bg-orange-500' : 'bg-gray-800'}`} />
-              ))}
-            </div>
+            <span className="text-[7px] md:text-[8px] uppercase tracking-wider text-gray-500 font-bold leading-none">Intentos</span>
+            <span className="text-[9px] font-mono text-orange-400 font-black">{retries}</span>
           </div>
           
           {inventory.length > 0 && (
@@ -59,16 +55,16 @@ function HUD() {
         </div>
 
         <div className="flex flex-col items-center">
-          <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-orange-500/80 font-black">Score</span>
-          <span className="text-sm md:text-lg font-mono font-black text-yellow-500 leading-none">
+          <span className="text-[7px] md:text-[9px] uppercase tracking-widest text-orange-500/80 font-black">Score</span>
+          <span className="text-xs md:text-base font-mono font-black text-yellow-500 leading-none">
             {totalPoints}
           </span>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-8">
+        <div className="flex items-center gap-2 md:gap-6">
           <div className="flex flex-col items-end">
-            <span className="text-[8px] md:text-[10px] uppercase tracking-wider text-gray-400">Progreso</span>
-            <span className="text-sm md:text-lg font-mono font-bold text-white">{score}/5</span>
+            <span className="text-[7px] md:text-[9px] uppercase tracking-wider text-gray-400">Progreso</span>
+            <span className="text-xs md:text-base font-mono font-bold text-white uppercase">{score}/5</span>
           </div>
           <div className="hidden sm:flex flex-col items-end border-l border-white/10 pl-6">
             <span className="text-[10px] uppercase tracking-wider text-gray-400">{level.theme}</span>
@@ -139,8 +135,8 @@ function LevelStart() {
             animate={{ width: '100%' }}
             className="h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent mb-4"
           />
-          <span className="text-orange-500 font-black tracking-[0.5em] uppercase text-xs sm:text-sm mb-2">Expedición 0{currentLevel + 1}</span>
-          <h2 className="text-white font-serif text-4xl sm:text-7xl font-black uppercase tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
+          <span className="text-orange-500 font-black tracking-[0.5em] uppercase text-[10px] sm:text-xs mb-1">Expedición 0{currentLevel + 1}</span>
+          <h2 className="text-white font-serif text-2xl sm:text-4xl font-black uppercase tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]">
             {level.name}
           </h2>
           <motion.div

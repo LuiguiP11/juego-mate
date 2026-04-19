@@ -63,8 +63,8 @@ export default function VictoryScreen() {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_rgba(200,165,0,0.2)_0%,_#000_100%)] flex flex-col items-center justify-center p-6 pointer-events-auto"
     >
-      <div className="w-full max-w-xl text-center space-y-10">
-        <header className="space-y-4">
+      <div className="w-full max-w-lg text-center space-y-6 sm:space-y-8">
+        <header className="space-y-2 sm:space-y-4">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -73,63 +73,63 @@ export default function VictoryScreen() {
           >
             <div className="relative">
               <div className="absolute inset-0 bg-yellow-500 blur-3xl opacity-30 animate-pulse" />
-              <Trophy size={100} className="text-yellow-400 relative z-10 drop-shadow-[0_0_20px_rgba(255,215,0,0.6)]" />
+              <Trophy size={60} className="text-yellow-400 relative z-10 drop-shadow-[0_0_20px_rgba(255,215,0,0.6)]" />
             </div>
           </motion.div>
           
-          <h1 className="text-4xl md:text-6xl font-serif font-black text-white tracking-tighter">
+          <h1 className="text-2xl md:text-4xl font-serif font-black text-white tracking-tighter">
             {isLast ? "¡LEYENDA SUPREMA!" : "¡NIVEL SUPERADO!"}
           </h1>
-          <p className="text-yellow-500 font-sans tracking-[0.4em] uppercase text-xs font-bold">
+          <p className="text-yellow-500 font-sans tracking-[0.2em] uppercase text-[10px] font-bold">
             Ascensión Lograda
           </p>
         </header>
 
-        <div className="bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 p-8 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col items-center p-4 bg-black/40 rounded-2xl border border-white/5">
-              <span className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Explorador</span>
-              <span className="text-lg font-bold text-white">{playerName || 'Anónimo'}</span>
+        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-4 sm:p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col items-center p-3 bg-black/40 rounded-xl border border-white/5">
+              <span className="text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">Explorador</span>
+              <span className="text-sm font-bold text-white">{playerName || 'Anónimo'}</span>
             </div>
-            <div className="flex flex-col items-center p-4 bg-black/40 rounded-2xl border border-white/5">
-              <span className="text-[10px] uppercase tracking-widest text-gray-400 mb-1">Artefacto</span>
-              <span className="text-lg font-bold text-yellow-500">{level.treasure}</span>
+            <div className="flex flex-col items-center p-3 bg-black/40 rounded-xl border border-white/5">
+              <span className="text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">Artefacto</span>
+              <span className="text-sm font-bold text-yellow-500">{level.treasure}</span>
             </div>
           </div>
 
-          <div className="flex flex-col items-center py-4 border-t border-white/10">
-            <span className="text-sm text-gray-300">Puntuación perfecta en las puertas matematicas</span>
-            <div className="flex items-center gap-4 mt-2">
+          <div className="flex flex-col items-center py-2 border-t border-white/10">
+            <span className="text-xs text-gray-300">Puntuación perfecta en las puertas matematicas</span>
+            <div className="flex items-center gap-2 mt-2">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black shadow-[0_0_15px_rgba(255,215,0,0.5)]">
-                  <Award size={20} fill="currentColor" />
+                <div key={i} className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-black shadow-[0_0_10px_rgba(255,215,0,0.5)]">
+                   <Award size={16} fill="currentColor" />
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 justify-center">
+        <div className="flex flex-col md:flex-row gap-3 justify-center w-full max-w-md mx-auto">
           <button
             onClick={handleNext}
-            className="flex-1 py-4 bg-white text-black rounded-2xl font-serif text-xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10"
+            className="flex-1 py-3 bg-white text-black rounded-xl font-serif text-base font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10"
           >
             {isLast ? "Finalizar Expedición" : "Siguiente Nivel"}
-            <ArrowRight size={24} />
+            <ArrowRight size={20} />
           </button>
           <button
             onClick={() => setPhase('certificate')}
-            className="flex-1 py-4 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-2xl font-serif text-xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-xl shadow-orange-600/20"
+            className="flex-1 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-xl font-serif text-base font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all shadow-xl shadow-orange-600/20"
           >
-            <Award size={24} />
-            Obtener Certificado
+            <Award size={20} />
+            Certificado
           </button>
           <button
             onClick={resetGame}
-            className="p-4 bg-white/5 text-gray-400 rounded-2xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center"
+            className="w-12 h-12 flex-shrink-0 bg-white/5 text-gray-400 rounded-xl border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center"
             title="Reiniciar"
           >
-            <Home size={24} />
+            <Home size={20} />
           </button>
         </div>
       </div>

@@ -19,7 +19,7 @@ export default function GameOverScreen() {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_#200_0%,_#000_100%)] flex flex-col items-center justify-center p-6 pointer-events-auto"
     >
-      <div className="w-full max-w-lg text-center space-y-12">
+      <div className="w-full max-w-md text-center space-y-8">
         <header className="space-y-4">
           <motion.div
             initial={{ y: -20, opacity: 0 }}
@@ -28,40 +28,40 @@ export default function GameOverScreen() {
           >
             <div className="relative">
               <div className="absolute inset-0 bg-red-600 blur-3xl opacity-20 animate-pulse" />
-              <Skull size={90} className="text-red-500 relative z-10" />
+              <Skull size={60} className="text-red-500 relative z-10" />
             </div>
           </motion.div>
           
-          <h1 className="text-5xl font-serif font-black text-white tracking-tight uppercase">
+          <h1 className="text-3xl font-serif font-black text-white tracking-tight uppercase">
             {hasRetries ? "Sin Aliento" : "Fin del Camino"}
           </h1>
-          <p className="text-red-600 font-sans tracking-[0.4em] uppercase text-[10px] font-black">
+          <p className="text-red-600 font-sans tracking-[0.2em] uppercase text-[10px] font-black">
             Expedición Detenida
           </p>
         </header>
 
-        <div className="bg-white/5 border border-white/5 rounded-3xl p-8 backdrop-blur-md space-y-8">
+        <div className="bg-white/5 border border-white/5 rounded-2xl p-5 backdrop-blur-md space-y-6">
           <div className="space-y-2">
-            <p className="text-gray-400 text-sm leading-relaxed italic">
+            <p className="text-gray-400 text-xs leading-relaxed italic">
               "Incluso los grandes exploradores deben saber cuándo reagruparse..."
             </p>
-            <p className="text-white text-lg font-serif">
+            <p className="text-white text-base font-serif">
               Caíste en el <span className="text-red-400 font-bold">{level.name.toUpperCase()}</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 border-y border-white/10 py-6">
+          <div className="grid grid-cols-2 gap-4 border-y border-white/10 py-4">
             <div className="flex flex-col items-center">
-              <span className="text-[10px] uppercase text-gray-500 font-black tracking-widest">Puntos Obtenidos</span>
-              <span className="text-3xl font-mono text-yellow-400 font-black">{totalPoints} PTS</span>
+              <span className="text-[9px] uppercase text-gray-500 font-black tracking-widest">Puntos Obtenidos</span>
+              <span className="text-xl font-mono text-yellow-400 font-black">{totalPoints} PTS</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-[10px] uppercase text-gray-500 font-black tracking-widest">Fallas Globales</span>
-              <div className="flex gap-2 mt-1">
+              <span className="text-[9px] uppercase text-gray-500 font-black tracking-widest">Fallas Globales</span>
+              <div className="flex gap-1.5 mt-1">
                 {[...Array(3)].map((_, i) => (
                   <RefreshCw 
                      key={i} 
-                     size={16} 
+                     size={14} 
                      className={i < (3 - retries) ? "text-red-600" : "text-gray-700"} 
                   />
                 ))}
@@ -69,37 +69,37 @@ export default function GameOverScreen() {
             </div>
           </div>
 
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-400 text-xs">
             {hasRetries 
-              ? `¿Deseas gastar uno de tus ${retries} intentos restantes para retomar la expedición?` 
-              : "Has agotado tus 3 oportunidades globales (9 vidas en total). No puedes avanzar más por ahora."}
+              ? `¿Deseas gastar uno de tus ${retries} intentos restantes?` 
+              : "Has agotado tus intentos. No puedes avanzar más."}
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 w-full max-w-sm mx-auto">
+        <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
           {hasRetries ? (
             <button
               onClick={() => useRetry()}
-              className="w-full py-4 bg-red-600 text-white rounded-2xl font-serif text-xl font-bold flex items-center justify-center gap-3 hover:bg-red-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-red-600/20"
+              className="w-full py-3 bg-red-600 text-white rounded-xl font-serif text-base font-bold flex items-center justify-center gap-3 hover:bg-red-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-red-600/20"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={18} />
               REINTENTAR ({retries})
             </button>
           ) : (
              <button
               onClick={() => useGameStore.getState().setPhase('certificate')}
-              className="w-full py-4 bg-orange-600 text-white rounded-2xl font-serif text-xl font-bold flex items-center justify-center gap-3 hover:bg-orange-500 transition-all shadow-xl shadow-orange-500/30"
+              className="w-full py-3 bg-orange-600 text-white rounded-xl font-serif text-base font-bold flex items-center justify-center gap-2 hover:bg-orange-500 transition-all shadow-xl shadow-orange-500/30"
             >
-              <XCircle size={20} />
-              Ver Resultados Finales
+              <XCircle size={18} />
+              Resultados Finales
             </button>
           )}
           
           <button
             onClick={resetGame}
-            className="w-full py-4 bg-white/5 text-gray-500 rounded-2xl border border-white/10 hover:bg-white/10 flex items-center justify-center gap-3 transition-all font-bold uppercase tracking-widest text-[10px]"
+            className="w-full py-3 bg-white/5 text-gray-500 rounded-xl border border-white/10 hover:bg-white/10 flex items-center justify-center gap-2 transition-all font-bold uppercase tracking-widest text-[9px]"
           >
-            <Home size={16} />
+            <Home size={14} />
             Menú Principal
           </button>
         </div>

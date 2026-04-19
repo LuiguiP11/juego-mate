@@ -129,34 +129,34 @@ export default function StartScreen() {
           <motion.h1
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="text-4xl sm:text-7xl md:text-9xl font-serif font-black tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+            className="text-3xl sm:text-5xl md:text-7xl font-serif font-black tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
           >
             <span className="animate-shimmer">JHIRO'S</span> <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-yellow-300 to-orange-500 italic drop-shadow-none">ADVENTURE</span>
           </motion.h1>
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <div className="h-[1px] w-8 sm:w-12 bg-gradient-to-r from-transparent to-orange-500/50" />
-            <p className="text-orange-200 font-sans tracking-[0.3em] sm:tracking-[0.5em] text-[7px] sm:text-xs font-black uppercase">
+          <div className="flex items-center justify-center gap-3 mt-3">
+            <div className="h-[1px] w-6 sm:w-10 bg-gradient-to-r from-transparent to-orange-500/50" />
+            <p className="text-orange-200 font-sans tracking-[0.2em] sm:tracking-[0.4em] text-[6px] sm:text-[9px] font-black uppercase">
               El Templo de los Siete Sabios
             </p>
-            <div className="h-[1px] w-8 sm:w-12 bg-gradient-to-l from-transparent to-orange-500/50" />
+            <div className="h-[1px] w-6 sm:w-10 bg-gradient-to-l from-transparent to-orange-500/50" />
           </div>
         </header>
 
-        <div className="w-full max-w-xl bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-12 space-y-6 sm:space-y-10 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-          <div className="space-y-4">
-            <label className="text-[9px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-2">
-              <User size={12} className="text-orange-500" />
+        <div className="w-full max-w-lg bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-8 space-y-4 sm:space-y-8 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+          <div className="space-y-3">
+            <label className="text-[8px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+              <User size={10} className="text-orange-500" />
               Ingresa al Santuario
             </label>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1 group">
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Tu Nombre de Héroe"
-                  className="w-full bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-6 sm:py-5 text-white focus:border-orange-500 outline-none transition-all font-serif text-lg sm:text-xl placeholder:text-white/20"
+                  className="w-full bg-white/5 border-2 border-white/10 rounded-xl sm:rounded-2xl px-4 py-2 sm:px-5 sm:py-3 text-white focus:border-orange-500 outline-none transition-all font-serif text-base sm:text-lg placeholder:text-white/20"
                 />
                 <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
               </div>
@@ -171,67 +171,67 @@ export default function StartScreen() {
             {error && <p className="text-red-400 text-[10px] font-black animate-shake text-center">{error}</p>}
           </div>
 
-          <div className="space-y-4">
-            <label className="text-[9px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-2">
-               <Trophy size={12} className="text-yellow-500" />
+          <div className="space-y-3">
+            <label className="text-[8px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+               <Trophy size={10} className="text-yellow-500" />
                Selecciona tu Destino
             </label>
-            <div className="grid grid-cols-2 gap-3 sm:gap-5">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <button
                 onClick={() => setGender('male')}
-                className={`group relative p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 sm:gap-4 active:scale-95 overflow-hidden ${
+                className={`group relative p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border-2 transition-all flex flex-col items-center gap-2 active:scale-95 overflow-hidden ${
                   gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
                 }`}
               >
-                <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-110' : 'bg-white/10'}`}>
-                   <Sword size={20} className="sm:size-7" />
+                <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-110' : 'bg-white/10'}`}>
+                   <Sword size={16} className="sm:size-6" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Guerrero</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Guerrero</span>
                 {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
               </button>
               <button
                 onClick={() => setGender('female')}
-                className={`group relative p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border-2 transition-all flex flex-col items-center gap-2 sm:gap-4 active:scale-95 overflow-hidden ${
+                className={`group relative p-3 sm:p-4 rounded-[1.2rem] sm:rounded-[1.5rem] border-2 transition-all flex flex-col items-center gap-2 active:scale-95 overflow-hidden ${
                   gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
                 }`}
               >
-                <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-110' : 'bg-white/10'}`}>
-                   <Shield size={20} className="sm:size-7" />
+                <div className={`w-8 h-8 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-110' : 'bg-white/10'}`}>
+                   <Shield size={16} className="sm:size-6" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Mística</span>
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Mística</span>
                 {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
               </button>
             </div>
           </div>
 
-          <div className="pt-4 sm:pt-6">
+          <div className="pt-2 sm:pt-4">
             <motion.button
                whileHover={{ scale: 1.02 }}
                whileTap={{ scale: 0.98 }}
                onClick={handleStart}
-               className="w-full py-4 sm:py-6 bg-white text-black rounded-[1.5rem] sm:rounded-[2rem] font-serif text-lg sm:text-2xl font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-4 sm:gap-6 group"
+               className="w-full py-3 sm:py-4 bg-white text-black rounded-[1.2rem] sm:rounded-[1.5rem] font-serif text-base sm:text-lg font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_20px_50px_rgba(255,255,255,0.1)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-3 sm:gap-4 group"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
-                <Play size={20} fill="currentColor" className="ml-1" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
+                <Play size={14} fill="currentColor" className="ml-1" />
               </div>
               INICIAR CRÓNICA
             </motion.button>
           </div>
         </div>
 
-        {/* Level Rail - Refined Anime Style */}
-        <div className="w-full max-w-7xl mt-12 sm:mt-20 relative px-4 sm:px-10">
-          <div className="flex items-end justify-between mb-6 sm:mb-8">
+        {/* Level Rail - Refined Anime Style - Compacted */}
+        <div className="w-full max-w-5xl mt-8 sm:mt-12 relative px-4 sm:px-8">
+          <div className="flex items-end justify-between mb-4 sm:mb-6">
             <div className="space-y-1">
-              <h3 className="text-white font-serif text-2xl sm:text-3xl font-black uppercase tracking-tighter">Expediciones</h3>
-              <div className="h-1 w-16 sm:w-20 bg-orange-600 rounded-full" />
+              <h3 className="text-white font-serif text-lg sm:text-2xl font-black uppercase tracking-tighter">Expediciones</h3>
+              <div className="h-0.5 w-12 sm:w-16 bg-orange-600 rounded-full" />
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-[8px] sm:text-[10px] text-orange-500 font-black tracking-widest uppercase">Progreso</span>
-              <span className="text-lg sm:text-xl font-mono text-white/80">{unlockedLevels}/{LEVELS.length}</span>
+              <span className="text-[7px] sm:text-[9px] text-orange-500 font-black tracking-widest uppercase">Progreso</span>
+              <span className="text-sm sm:text-base font-mono text-white/80">{unlockedLevels}/{LEVELS.length}</span>
             </div>
           </div>
-          <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-8 sm:pb-12 snap-x no-scrollbar">
+          <div className="flex gap-3 sm:gap-5 overflow-x-auto pb-6 sm:pb-10 snap-x no-scrollbar">
             {LEVELS.map((lv, i) => {
               const unlocked = i < unlockedLevels;
               return (
@@ -239,39 +239,39 @@ export default function StartScreen() {
                   key={lv.id}
                   disabled={!unlocked}
                   onClick={() => setSelectedLevel(i)}
-                  className={`flex-shrink-0 w-48 sm:w-80 aspect-[4/5] rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-8 flex flex-col justify-end relative shadow-2xl transition-all snap-start overflow-hidden group/card ${
+                  className={`flex-shrink-0 w-40 sm:w-64 aspect-[4/5] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 flex flex-col justify-end relative shadow-2xl transition-all snap-start overflow-hidden group/card ${
                     selectedLevel === i ? 'ring-2 ring-orange-500 scale-105 z-10' : 'scale-100'
                   } ${!unlocked ? 'bg-[#120a05] grayscale opacity-40 cursor-not-allowed' : 'bg-black'}`}
                 >
                   <div className="absolute inset-0 z-0">
                      <img 
                        src={`https://picsum.photos/seed/${lv.theme}/600/800`} 
-                       className={`w-full h-full object-cover transition-transform duration-[20s] group-hover/card:scale-125 group-hover/card:rotate-2 ${unlocked ? 'opacity-40 animate-pan group-hover/card:opacity-70' : 'opacity-10'}`} 
+                       className={`w-full h-full object-cover transition-transform duration-[20s] group-hover/card:scale-125 group-hover/card:rotate-2 ${unlocked ? 'opacity-30 animate-pan group-hover/card:opacity-60' : 'opacity-10'}`} 
                        referrerPolicy="no-referrer"
                        alt={lv.name}
                      />
                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent" />
-                     {/* Scanline Effect */}
-                     <div className="absolute inset-0 z-10 pointer-events-none opacity-20 group-hover/card:opacity-40 transition-opacity">
-                        <div className="absolute inset-0 h-[2px] bg-white/20 animate-scanline" />
+                     {/* Scanline Effect - Subtler */}
+                     <div className="absolute inset-0 z-10 pointer-events-none opacity-5 group-hover/card:opacity-10 transition-opacity">
+                        <div className="absolute inset-0 h-[1px] bg-white/20 animate-scanline" />
                      </div>
                   </div>
                   
-                  <div className="relative z-10 flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                       <span className="w-6 h-[1px] bg-orange-500" />
-                       <span className="text-[10px] text-orange-500 font-black tracking-[0.3em] uppercase">Nivel 0{i + 1}</span>
+                  <div className="relative z-10 flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5">
+                       <span className="w-4 h-[1px] bg-orange-500" />
+                       <span className="text-[8px] text-orange-500 font-black tracking-[0.3em] uppercase">Nivel 0{i + 1}</span>
                     </div>
-                    <h4 className="text-white font-serif text-2xl sm:text-3xl font-black leading-none uppercase tracking-tighter">{lv.name}</h4>
-                    <p className="text-white/40 text-[10px] font-bold tracking-widest uppercase mb-2">{lv.theme}</p>
+                    <h4 className="text-white font-serif text-lg sm:text-xl font-black leading-none uppercase tracking-tighter">{lv.name}</h4>
+                    <p className="text-white/40 text-[8px] font-bold tracking-widest uppercase mb-1">{lv.theme}</p>
                     
-                    <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/5">
-                      <span className="text-[8px] text-orange-200/50 font-black tracking-widest uppercase">
-                        {unlocked ? (selectedLevel === i ? 'Misión Activa' : 'Presiona para explorar') : 'Área Restringida'}
+                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-white/5">
+                      <span className="text-[7px] text-orange-200/40 font-black tracking-widest uppercase">
+                        {unlocked ? (selectedLevel === i ? 'Misión Activa' : 'Explorar') : 'Cerrado'}
                       </span>
                       {unlocked && (
-                        <div className={`p-2 rounded-full transition-colors ${selectedLevel === i ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/40'}`}>
-                           <ChevronRight size={16} />
+                        <div className={`p-1.5 rounded-full transition-colors ${selectedLevel === i ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/40'}`}>
+                           <ChevronRight size={12} />
                         </div>
                       )}
                     </div>

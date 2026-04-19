@@ -29,61 +29,61 @@ export default function ControlsHint() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          className="fixed bottom-10 right-10 z-[100] flex flex-col gap-4 p-6 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl pointer-events-auto"
+          className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 p-4 bg-black/85 backdrop-blur-xl border border-white/20 rounded-xl shadow-2xl pointer-events-auto max-w-[200px]"
         >
-          <div className="flex items-center gap-3 border-b border-white/10 pb-3">
-            <Zap className="text-yellow-400" size={20} />
-            <h3 className="font-black text-white uppercase tracking-tighter text-lg">Guía de Controles</h3>
+          <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+            <Zap className="text-yellow-400" size={16} />
+            <h3 className="font-black text-white uppercase tracking-tighter text-sm">Controles</h3>
           </div>
 
           {!isMobile ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/10 p-2 rounded-lg">
-                  <Keyboard className="text-orange-500" size={24} />
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-1.5 rounded-lg">
+                  <Keyboard className="text-orange-500" size={18} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-400 uppercase font-bold">Moverse</span>
-                  <span className="text-white font-black">WASD o Flechas</span>
+                  <span className="text-[8px] text-gray-400 uppercase font-bold">Moverse</span>
+                  <span className="text-white font-black text-xs">WASD</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="bg-white/10 p-2 rounded-lg">
-                  <div className="w-6 h-6 border-2 border-orange-500 rounded flex items-center justify-center text-[10px] font-black">SPACE</div>
+              <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-1.5 rounded-lg">
+                  <div className="w-5 h-5 border border-orange-500 rounded flex items-center justify-center text-[8px] font-black text-white">SPC</div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-400 uppercase font-bold">Saltar</span>
-                  <span className="text-white font-black">Barra Espaciadora</span>
+                  <span className="text-[8px] text-gray-400 uppercase font-bold">Saltar</span>
+                  <span className="text-white font-black text-xs">Espacio</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="bg-white/10 p-2 rounded-lg">
-                  <div className="w-6 h-6 border-2 border-orange-500 rounded flex items-center justify-center text-[10px] font-black">E</div>
+              <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-1.5 rounded-lg">
+                  <div className="w-5 h-5 border border-orange-500 rounded flex items-center justify-center text-[8px] font-black text-white">E</div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-400 uppercase font-bold">Interactuar</span>
-                  <span className="text-white font-black">Tecla E</span>
+                  <span className="text-[8px] text-gray-400 uppercase font-bold">Acción</span>
+                  <span className="text-white font-black text-xs">Tecla E</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/10 p-2 rounded-lg">
-                  <Smartphone className="text-orange-500" size={24} />
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-1.5 rounded-lg">
+                  <Smartphone className="text-orange-500" size={18} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-400 uppercase font-bold">Movimiento</span>
-                  <span className="text-white font-black">Arrastrar en pantalla</span>
+                  <span className="text-[8px] text-gray-400 uppercase font-bold">Caminar</span>
+                  <span className="text-white font-black text-xs">Joystick</span>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="bg-white/10 p-2 rounded-lg">
-                  <Zap className="text-orange-500" size={24} />
+              <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-1.5 rounded-lg">
+                  <Zap className="text-orange-500" size={18} />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-400 uppercase font-bold">Acción</span>
-                  <span className="text-white font-black">Tocar botones HUD</span>
+                  <span className="text-[8px] text-gray-400 uppercase font-bold">Interactuar</span>
+                  <span className="text-white font-black text-xs">Botón HUD</span>
                 </div>
               </div>
             </div>
@@ -91,9 +91,9 @@ export default function ControlsHint() {
 
           <button 
             onClick={() => setVisible(false)}
-            className="mt-2 w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] uppercase tracking-widest font-black text-gray-400 transition-colors"
+            className="mt-1 w-full py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[8px] uppercase tracking-widest font-black text-gray-400 transition-colors"
           >
-            Entendido
+            Cerrar
           </button>
         </motion.div>
       )}

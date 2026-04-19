@@ -57,6 +57,10 @@ export default function Player() {
   useFrame((state, delta) => {
     if (phase !== 'playing') return;
 
+    // Increment time manually using delta (modern approach avoiding THREE.Clock)
+    timeRef.current += delta;
+    const time = timeRef.current;
+
     const { forward, backward, left, right, jump, interact } = getKeys();
     const gates = useGameStore.getState().score; // Number of solved gates
 
@@ -150,7 +154,6 @@ export default function Player() {
             
             // Basic proximity check for simplified collisions
             if (dist < 1.2) {
-                const time = state.clock.getElapsedTime();
                 const currentLevelIdx = useGameStore.getState().currentLevel;
                 const levelMetadata = useGameStore.getState().currentLevel !== null ? LEVELS[currentLevelIdx] : null;
                 const isWaterLevel = levelMetadata?.theme === 'water';
@@ -208,8 +211,6 @@ export default function Player() {
 
     // Animation updates...
     const isMoving = dx !== 0 || dz !== 0;
-    timeRef.current += delta;
-    const time = timeRef.current;
     
     if (isMoving) {
       const swing = Math.sin(time * 10) * 0.6;

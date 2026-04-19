@@ -36,32 +36,32 @@ export default function IntroScreen() {
           ))}
       </div>
 
-      <div className="relative z-10 max-w-2xl w-full flex flex-col items-center space-y-6 sm:space-y-12">
+      <div className="relative z-10 max-w-lg w-full flex flex-col items-center space-y-4 sm:space-y-8">
         <motion.div
            initial={{ y: -50, scale: 0.8 }}
            animate={{ y: 0, scale: 1 }}
-           className="bg-white/5 p-4 sm:p-6 rounded-full border border-white/10"
+           className="bg-white/5 p-3 sm:p-4 rounded-full border border-white/10"
         >
-          <Compass className="text-orange-500 w-10 h-10 sm:w-16 sm:h-16 animate-spin-slow" />
+          <Compass className="text-orange-500 w-8 h-8 sm:w-12 sm:h-12 animate-spin-slow" />
         </motion.div>
  
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-2 sm:space-y-4">
           <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-orange-500 font-sans tracking-[0.3em] uppercase text-[10px] sm:text-sm font-black"
+            className="text-orange-500 font-sans tracking-[0.2em] uppercase text-[8px] sm:text-xs font-black"
           >
             Misión: El Despertar del Sabio
           </motion.h2>
           
-          <div className="space-y-3 sm:space-y-4 px-2">
+          <div className="space-y-2 sm:space-y-3 px-2">
             {STORY_TEXT.map((text, i) => (
               <motion.p
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 + i * 0.8 }}
-                className="text-gray-300 text-sm sm:text-lg md:text-xl font-serif leading-relaxed italic"
+                className="text-gray-300 text-xs sm:text-sm md:text-base font-serif leading-relaxed italic"
               >
                 {i === 0 && <span className="text-white font-bold">Bienvenido, {playerName || 'Explorador'}. </span>}
                 {text}
@@ -74,19 +74,19 @@ export default function IntroScreen() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 4 }}
-          className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full px-4"
+          className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full px-4"
         >
           <button
             onClick={() => setPhase('playing')}
-            className="flex-1 py-4 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl font-serif text-lg sm:text-xl font-bold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-orange-600/30"
+            className="flex-1 py-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-serif text-base sm:text-lg font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-orange-600/30"
           >
             Aceptar Desafío
-            <ArrowRight size={24} />
+            <ArrowRight size={20} />
           </button>
           
           <button
             onClick={() => setPhase('playing')}
-            className="px-6 py-3 sm:px-8 sm:py-4 bg-white/5 hover:bg-white/10 text-gray-500 rounded-2xl border border-white/5 transition-all text-[10px] sm:text-xs uppercase tracking-widest font-black"
+            className="px-4 py-2 sm:px-6 sm:py-3 bg-white/5 hover:bg-white/10 text-gray-500 rounded-xl border border-white/5 transition-all text-[8px] sm:text-[10px] uppercase tracking-widest font-black"
           >
             Omitir Intro
           </button>
