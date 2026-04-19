@@ -587,7 +587,7 @@ export default function World() {
     // Traps placement based on level difficulty
     const trapsCount = 2 + currentLevelIdx;
     for(let i = 0; i < trapsCount; i++) {
-        const z = -(i + 1) * (corridorLen / (trapsCount + 1)) - 5;
+        const z = -(i + 1) * (corridorLen / (trapsCount + 1)) - 10;
         if (isWater || level.theme === 'cave' || isCrystal) {
             tList.push({ type: 'spikes', pos: [0, 0, z] });
         } else {

@@ -37,6 +37,7 @@ interface GameState {
   inventory: string[];
   muted: boolean;
   totalPoints: number;
+  isInvulnerable: boolean;
   joystick: { x: number; y: number; active: boolean };
   jumpPressed: boolean;
   interactPressed: boolean;
@@ -132,6 +133,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   inventory: [],
   muted: false,
   totalPoints: 0,
+  isInvulnerable: false,
   joystick: { x: 0, y: 0, active: false },
   jumpPressed: false,
   interactPressed: false,
@@ -168,8 +170,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         set((state) => ({ totalPoints: state.totalPoints + 2 }));
       }
     } else {
+      if (get().isInvulnerable) return;
+
       const newLives = get().lives - 1;
-      set({ lives: newLives });
+      set({ lives: newLives, isInvulnerable: true });
+
+      setTimeout(() => {
+        set({ isInvulnerable: false });
+      }, 1500);
+
       if (newLives <= 0) {
         set({ phase: 'gameover' });
       }
@@ -182,7 +191,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: 0, 
       lives: 3, 
       phase: 'playing',
-      nearGateIndex: null 
+      nearGateIndex: null,
+      isInvulnerable: false
     });
   },
 
@@ -193,7 +203,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     lives: 3, 
     retries: 3,
     inventory: [],
-    totalPoints: 0
+    totalPoints: 0,
+    isInvulnerable: false
   }),
 
   nextLevel: () => {
@@ -206,7 +217,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         score: 0,
         lives: 3,
         phase: 'playing',
-        nearGateIndex: null
+        nearGateIndex: null,
+        isInvulnerable: false
       });
     } else {
       set({ phase: 'start' });

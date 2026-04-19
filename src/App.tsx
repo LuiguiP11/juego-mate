@@ -31,6 +31,8 @@ export default function App() {
           --jhiros-pink: #FF69B4;
         }
 
+        html { font-size: 14px; }
+
         .font-serif { font-family: 'MedievalSharp', serif; }
         .font-sans { font-family: 'Nunito', sans-serif; }
         .font-mono { font-family: 'Orbitron', monospace; }

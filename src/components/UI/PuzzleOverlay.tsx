@@ -41,8 +41,8 @@ export default function PuzzleOverlay() {
       className="fixed inset-0 z-[400] flex items-center justify-center p-4 sm:p-8 bg-[#050402]/95 backdrop-blur-3xl border-4 border-orange-600/20 pointer-events-auto"
     >
       <motion.div
-        initial={{ scale: 0.8, opacity: 0, y: 50 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
+        initial={{ scale: 0.6, opacity: 0, y: 50 }}
+        animate={{ scale: 0.8, opacity: 1, y: 0 }}
         className="w-full max-w-2xl bg-[#0a0a0a] border-[8px] sm:border-[12px] border-[#1a1c2a] rounded-[2rem] sm:rounded-[3rem] p-4 sm:p-12 relative shadow-[0_0_120px_rgba(255,165,0,0.15)] overflow-hidden"
       >
         {/* Anime-Style Gradient Accents */}
@@ -60,7 +60,7 @@ export default function PuzzleOverlay() {
             >
               Enigma Sagrado {score + 1}/5
             </motion.div>
-            <h2 className="text-white font-serif text-lg sm:text-2xl font-black tracking-tighter uppercase italic px-2">
+            <h2 className="text-white font-serif text-base sm:text-xl font-black tracking-tighter uppercase italic px-2">
               — {level.name.toUpperCase()} —
             </h2>
           </header>

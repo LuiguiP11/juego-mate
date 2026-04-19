@@ -19,7 +19,7 @@ export default function GameOverScreen() {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_#200_0%,_#000_100%)] flex flex-col items-center justify-center p-6 pointer-events-auto"
     >
-      <div className="w-full max-w-md text-center space-y-8">
+      <div className="w-full max-w-md text-center space-y-8 transform scale-[0.8]">
         <header className="space-y-4">
           <motion.div
             initial={{ y: -20, opacity: 0 }}
@@ -32,7 +32,7 @@ export default function GameOverScreen() {
             </div>
           </motion.div>
           
-          <h1 className="text-3xl font-serif font-black text-white tracking-tight uppercase">
+          <h1 className="text-xl font-serif font-black text-white tracking-tight uppercase">
             {hasRetries ? "Sin Aliento" : "Fin del Camino"}
           </h1>
           <p className="text-red-600 font-sans tracking-[0.2em] uppercase text-[10px] font-black">

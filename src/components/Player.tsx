@@ -156,15 +156,20 @@ export default function Player() {
     }
 
     // --- TRAP COLLISIONS ---
-    if (useGameStore.getState().currentLevel >= 1) {
-        for(let i = 0; i < 3; i++) {
-            const trapZ = -(i + 1) * 15 - 5;
+    const currentLevelIdx = useGameStore.getState().currentLevel;
+    const isInvulnerable = useGameStore.getState().isInvulnerable;
+    
+    if (currentLevelIdx >= 1) {
+        const corridorLen = 45;
+        const trapsCount = 2 + currentLevelIdx;
+        
+        for(let i = 0; i < trapsCount; i++) {
+            const trapZ = -(i + 1) * (corridorLen / (trapsCount + 1)) - 10;
             const dist = Math.sqrt(Math.pow(position.current.x, 2) + Math.pow(position.current.z - trapZ, 2));
             
             // Basic proximity check for simplified collisions
             if (dist < 1.2) {
-                const currentLevelIdx = useGameStore.getState().currentLevel;
-                const levelMetadata = useGameStore.getState().currentLevel !== null ? LEVELS[currentLevelIdx] : null;
+                const levelMetadata = LEVELS[currentLevelIdx];
                 const isWaterLevel = levelMetadata?.theme === 'water';
                 const isCaveLevel = levelMetadata?.theme === 'cave';
                 const isPendulum = !isAbyss && !isWaterLevel && !isCaveLevel;
@@ -180,7 +185,7 @@ export default function Player() {
                     if (cycle > 0.6) hit = true;
                 }
 
-                if (hit) {
+                if (hit && !isInvulnerable) {
                     // Push back and damage
                     useGameStore.getState().solvePuzzle(false);
                     position.current.z += 2;
@@ -216,6 +221,13 @@ export default function Player() {
       if (dz > 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, Math.PI, 0.2);
       if (dx < 0 && dz === 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, Math.PI * 0.5, 0.2);
       if (dx > 0 && dz === 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, -Math.PI * 0.5, 0.2);
+
+      // Invulnerability effect (flicker)
+      if (isInvulnerable) {
+        group.current.visible = Math.floor(time * 20) % 2 === 0;
+      } else {
+        group.current.visible = true;
+      }
     }
 
     // Animation updates...
