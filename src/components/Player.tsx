@@ -54,6 +54,8 @@ export default function Player() {
     skin: '#f5b898', body: '#5a0e9a', pants: '#2a1860', hat: '#6a00aa', belt: '#2a1808', boot: '#1a1230'
   }, [isMale]);
 
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
+
   useFrame((state, delta) => {
     if (phase !== 'playing') return;
 
@@ -78,19 +80,22 @@ export default function Player() {
       useGameStore.getState().setPhase('puzzle');
     }
 
+    // Framerate correction factor (baseline is 60 FPS)
+    const timeFactor = Math.min(delta * 60, 3.0);
+
     // Horizontal Movement
     let dx = 0;
     let dz = 0;
-    if (forward) dz -= MOVE_SPEED;
-    if (backward) dz += MOVE_SPEED * 0.6;
-    if (left) dx -= MOVE_SPEED * 0.7;
-    if (right) dx += MOVE_SPEED * 0.7;
+    if (forward) dz -= MOVE_SPEED * timeFactor;
+    if (backward) dz += MOVE_SPEED * 0.6 * timeFactor;
+    if (left) dx -= MOVE_SPEED * 0.7 * timeFactor;
+    if (right) dx += MOVE_SPEED * 0.7 * timeFactor;
 
     velocity.current.x = dx;
     velocity.current.z = dz;
 
     // Vertical Movement (Gravity)
-    velocity.current.y -= GRAVITY;
+    velocity.current.y -= GRAVITY * timeFactor;
     
     // Jump
     if (jump && onGround.current) {
@@ -98,7 +103,9 @@ export default function Player() {
       onGround.current = false;
     }
 
-    position.current.add(velocity.current);
+    position.current.x += velocity.current.x;
+    position.current.z += velocity.current.z;
+    position.current.y += velocity.current.y * timeFactor;
 
     // --- COLLISIONS ---
     
@@ -143,7 +150,7 @@ export default function Player() {
         // Actual marker Z is gateZ + 1.2
         const markerZ = gateZ + 1.2;
         const dist = Math.sqrt(Math.pow(position.current.x, 2) + Math.pow(position.current.z - markerZ, 2));
-        if (dist < 1.2 && !isSolved) {
+        if (dist < 2.0 && !isSolved) {
             foundGate = i;
         }
 
@@ -253,23 +260,25 @@ export default function Player() {
   return (
     <group ref={group} name="player_group" scale={0.65}>
       <Sparkles 
-         count={50} 
+         count={graphicsQuality === 'high' ? 40 : 8} 
          scale={[1.5, 3, 1.5]} 
-         size={3} 
+         size={graphicsQuality === 'high' ? 3 : 1.5} 
          speed={2} 
-         opacity={0.8} 
+         opacity={graphicsQuality === 'high' ? 0.8 : 0.5} 
          color={isMale ? "#00ffff" : "#ff00ff"} 
          noise={0.5}
       />
-      <Sparkles 
-         count={20} 
-         scale={[2, 2, 2]} 
-         size={6} 
-         speed={4} 
-         opacity={0.4} 
-         color="#ffffff" 
-         noise={1}
-      />
+      {graphicsQuality === 'high' && (
+        <Sparkles 
+           count={15} 
+           scale={[2, 2, 2]} 
+           size={5} 
+           speed={3} 
+           opacity={0.3} 
+           color="#ffffff" 
+           noise={1}
+        />
+      )}
       <group position={[0, -0.45, 0]} name="player_shadow">
          <mesh rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[0.9, 0.9]} />
@@ -444,7 +453,11 @@ export default function Player() {
         </mesh>
       </group>
 
-      <pointLight position={[0, 2, 1]} intensity={2.5} color="#ffffff" distance={10} />
+      {graphicsQuality === 'high' ? (
+        <pointLight position={[0, 2, 1]} intensity={2.0} color="#ffffff" distance={10} />
+      ) : (
+        <pointLight position={[0, 2, 1]} intensity={1.0} color="#ffffff" distance={5} />
+      )}
     </group>
   );
 }

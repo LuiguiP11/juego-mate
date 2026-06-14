@@ -12,8 +12,10 @@ import { LEVELS, useGameStore } from '../store';
 function Torch({ position }: { position: [number, number, number] }) {
   const lightRef = useRef<PointLight>(null);
   const timeRef = useRef(0);
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   
   useFrame((state, delta) => {
+    if (graphicsQuality !== 'high') return;
     timeRef.current += delta;
     if (lightRef.current) {
       // Flicker effect
@@ -30,7 +32,11 @@ function Torch({ position }: { position: [number, number, number] }) {
         <meshPhongMaterial color="#422" />
       </mesh>
       {/* Flame Glow */}
-      <pointLight ref={lightRef} intensity={3} distance={15} color="#ff8822" position={[0, 0.4, 0]} castShadow={false} />
+      {graphicsQuality === 'high' ? (
+        <pointLight ref={lightRef} intensity={3} distance={15} color="#ff8822" position={[0, 0.4, 0]} castShadow={false} />
+      ) : (
+        <pointLight intensity={1.5} distance={6} color="#ff8822" position={[0, 0.4, 0]} />
+      )}
       <mesh position={[0, 0.4, 0]}>
         <sphereGeometry args={[0.08, 8, 8]} />
         <meshBasicMaterial color="#ffaa44" />
@@ -42,6 +48,7 @@ function Torch({ position }: { position: [number, number, number] }) {
 function Gate({ index, z, solved, theme, active }: { index: number, z: number, solved: boolean, theme: string, active: boolean }) {
   const doorRef = useRef<any>(null);
   const [opacity, setOpacity] = useState(1);
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   
   // High-contrast theme colors
   const colors = useMemo(() => {
@@ -128,15 +135,21 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
                 <circleGeometry args={[0.1, 16]} />
                 <meshBasicMaterial color="#ffffff" transparent opacity={0.8} blending={AdditiveBlending} />
             </mesh>
-            <pointLight intensity={6} color={colors.glow} distance={8} />
+            <pointLight intensity={graphicsQuality === 'high' ? 5 : 2.5} color={colors.glow} distance={graphicsQuality === 'high' ? 8 : 4} />
             
             {/* Floating Sigil Above */}
-            <Float speed={5} rotationIntensity={2} floatIntensity={0.5}>
+            <Float 
+              speed={graphicsQuality === 'high' ? 5 : 1.5} 
+              rotationIntensity={graphicsQuality === 'high' ? 2 : 0.2} 
+              floatIntensity={graphicsQuality === 'high' ? 0.5 : 0.05}
+            >
                 <mesh position={[0, 1.5, 0]}>
                     <octahedronGeometry args={[0.25]} />
                     <meshBasicMaterial color={colors.secondary} wireframe />
                 </mesh>
-                <pointLight intensity={3} color={colors.secondary} distance={3} />
+                {graphicsQuality === 'high' && (
+                  <pointLight intensity={3} color={colors.secondary} distance={3} />
+                )}
             </Float>
         </group>
       )}
@@ -216,6 +229,7 @@ function Portal({ position, theme }: { position: [number, number, number], theme
   const vortexRef = useRef<any>(null);
   const auraRef = useRef<any>(null);
   const coreRef = useRef<any>(null);
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
 
   // Theme-based colors
   const colors = useMemo(() => {
@@ -247,7 +261,7 @@ function Portal({ position, theme }: { position: [number, number, number], theme
   return (
     <group position={position}>
       {/* Beacon Wall Light - Higher intensity, smaller distance */}
-      <pointLight ref={coreRef} intensity={10} color={colors.primary} distance={20} position={[0, 2.5, 0]} />
+      <pointLight ref={coreRef} intensity={graphicsQuality === 'high' ? 8 : 4} color={colors.primary} distance={graphicsQuality === 'high' ? 20 : 10} position={[0, 2.5, 0]} />
       
       {/* Portal Frame - Two massive tech-sigil towers */}
       <group>
@@ -303,11 +317,11 @@ function Portal({ position, theme }: { position: [number, number, number], theme
       {/* Portal Particles */}
       <Sparkles 
          position={[0, 3, 0]}
-         count={150} 
+         count={graphicsQuality === 'high' ? 100 : 15} 
          scale={[6, 6, 2]} 
-         size={8} 
-         speed={4} 
-         opacity={1} 
+         size={graphicsQuality === 'high' ? 8 : 4} 
+         speed={graphicsQuality === 'high' ? 3 : 1.5} 
+         opacity={graphicsQuality === 'high' ? 0.8 : 0.4} 
          color={colors.primary} 
       />
     </group>
@@ -439,15 +453,18 @@ function Prop({ type, position }: { type: 'vase' | 'crate' | 'barrel' | 'pillar'
 }
 
 function Particles({ count = 80, theme }: { count?: number, theme: string }) {
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
+  const finalCount = graphicsQuality === 'high' ? count : Math.floor(count * 0.15);
+
   const points = useMemo(() => {
-    const p = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
+    const p = new Float32Array(finalCount * 3);
+    for (let i = 0; i < finalCount; i++) {
       p[i * 3] = (Math.random() - 0.5) * 12;
       p[i * 3 + 1] = Math.random() * 8;
       p[i * 3 + 2] = -Math.random() * 80;
     }
     return p;
-  }, [count]);
+  }, [finalCount]);
 
   const pointsRef = useRef<any>(null);
   const timeRef = useRef(0);
@@ -495,6 +512,7 @@ function Particles({ count = 80, theme }: { count?: number, theme: string }) {
 export default function World() {
   const currentLevelIdx = useGameStore((state) => state.currentLevel);
   const score = useGameStore((state) => state.score);
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   const level = LEVELS[currentLevelIdx];
   const isWater = level.theme === 'water';
   const isLibrary = level.theme === 'library';
@@ -622,7 +640,7 @@ export default function World() {
                 <boxGeometry args={[0.4, 7, 0.8]} />
                 <meshPhongMaterial color={isCrystal ? "#2a0055" : "#1a1a1a"} />
             </mesh>
-            {isCrystal && i % 3 === 0 && (
+            {isCrystal && i % 3 === 0 && graphicsQuality === 'high' && (
                 <pointLight position={[0, 4, 0]} intensity={1.5} color="#8800ff" distance={12} />
             )}
         </group>
@@ -687,7 +705,9 @@ export default function World() {
                    map={null} // We'll just use a shape
                 />
             </mesh>
-            <pointLight intensity={0.5} color="#ff8800" distance={5} />
+            {graphicsQuality === 'high' && (
+              <pointLight intensity={0.5} color="#ff8800" distance={5} />
+            )}
         </group>
       ))}
 

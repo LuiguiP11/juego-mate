@@ -11,6 +11,7 @@ import { Check, X } from 'lucide-react';
 export default function PuzzleOverlay() {
   const { currentLevel, score, solvePuzzle, setPhase } = useGameStore();
   const level = LEVELS[currentLevel];
+  const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   
   // Use the puzzle according to current progress (score)
   const puzzle = level.puzzles[Math.min(score, level.puzzles.length - 1)]; 
@@ -25,12 +26,13 @@ export default function PuzzleOverlay() {
     const isCorrect = ans === puzzle.c;
     setResult(isCorrect ? 'correct' : 'wrong');
     
+    // Quickened response timeout slightly from 1200ms to 900ms to feel snappier
     setTimeout(() => {
       solvePuzzle(isCorrect);
       if (isCorrect || useGameStore.getState().lives > 0) {
         setPhase('playing');
       }
-    }, 1200);
+    }, 900);
   };
 
   return (
@@ -38,7 +40,9 @@ export default function PuzzleOverlay() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[400] flex items-center justify-center p-3 sm:p-8 bg-[#050402]/95 backdrop-blur-3xl border-2 sm:border-4 border-orange-600/20 pointer-events-auto"
+      className={`fixed inset-0 z-[400] flex items-center justify-center p-3 sm:p-8 bg-black/95 ${
+        graphicsQuality === 'high' ? 'backdrop-blur-xl' : ''
+      } border-2 sm:border-4 border-orange-600/20 pointer-events-auto`}
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0, y: 50 }}

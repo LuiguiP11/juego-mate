@@ -37,6 +37,7 @@ interface GameState {
   inventory: string[];
   muted: boolean;
   totalPoints: number;
+  graphicsQuality: 'high' | 'low';
   mobileControls: {
     forward: boolean;
     backward: boolean;
@@ -47,6 +48,7 @@ interface GameState {
   
   // Actions
   setPhase: (phase: GamePhase) => void;
+  setGraphicsQuality: (quality: 'high' | 'low') => void;
   setPlayerInfo: (name: string, user: string, grade: string) => void;
   setGender: (gender: 'male' | 'female') => void;
   setNearGate: (index: number | null) => void;
@@ -134,6 +136,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   inventory: [],
   muted: false,
   totalPoints: 0,
+  graphicsQuality: (typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|Macintosh/i.test(navigator.userAgent)) ? 'low' : 'high',
   mobileControls: {
     forward: false,
     backward: false,
@@ -143,6 +146,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setPhase: (phase) => set({ phase }),
+  
+  setGraphicsQuality: (quality) => set({ graphicsQuality: quality }),
   
   setMobileControl: (control, val) => set((state) => ({
     mobileControls: {

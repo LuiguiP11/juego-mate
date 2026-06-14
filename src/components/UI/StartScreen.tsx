@@ -33,27 +33,60 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
 
       try {
         html5QrCode = new Html5Qrcode("qr-reader");
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { 
-            fps: 10, 
-            qrbox: (width, height) => {
-              const min = Math.min(width, height);
-              const size = Math.floor(min * 0.75); // 75% of container
-              return { width: size, height: size };
-            }
-          },
-          (decodedText) => {
-            if (isMounted) {
-              onSuccess(decodedText);
-            }
-          },
-          () => {} // silent verbosity
-        );
+        
+        // Try starting with rear camera (environment mode) first
+        try {
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            { 
+              fps: 15, 
+              qrbox: (width, height) => {
+                const min = Math.min(width, height);
+                // Wider scanning box of 85% for an extremely mobile-friendly scan experience
+                const size = Math.floor(min * 0.85); 
+                return { width: size, height: size };
+              }
+            },
+            (decodedText) => {
+              if (isMounted) {
+                onSuccess(decodedText);
+              }
+            },
+            () => {} // silent feedback
+          );
+        } catch (firstErr) {
+          console.warn("Retrying with camera list fallback due to facingMode environment error:", firstErr);
+          if (!isMounted) return;
+          
+          // Fallback: list all cameras and pick any available camera (usually rear camera is lists' last camera)
+          const cameras = await Html5Qrcode.getCameras();
+          if (cameras && cameras.length > 0) {
+            const selectedCameraId = cameras[cameras.length - 1].id;
+            await html5QrCode.start(
+              selectedCameraId,
+              { 
+                fps: 15,
+                qrbox: (width, height) => {
+                  const min = Math.min(width, height);
+                  const size = Math.floor(min * 0.85); 
+                  return { width: size, height: size };
+                }
+              },
+              (decodedText) => {
+                if (isMounted) {
+                  onSuccess(decodedText);
+                }
+              },
+              () => {}
+            );
+          } else {
+            throw new Error("No se encontraron cámaras compatibles.");
+          }
+        }
       } catch (err) {
         console.error("Camera access error:", err);
         if (isMounted) {
-          onError("No se pudo acceder a la cámara. Asegúrate de otorgar los permisos necesarios.");
+          onError("No se pudo iniciar la cámara. Otorga los permisos e inténtalo de nuevo.");
           onClose();
         }
       }
@@ -86,8 +119,8 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl"
     >
       <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)] animate-panic">
-        <div id="qr-reader" className="w-full h-full" />
-        <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)]" />
+        <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
+        <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-scanline" />
       </div>
       <button
         onClick={onClose}
@@ -173,6 +206,26 @@ export default function StartScreen() {
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        #qr-reader {
+          position: relative !important;
+          border: none !important;
+          background: black !important;
+        }
+        #qr-reader video {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover !important;
+        }
+        #qr-reader__header_message,
+        #qr-reader__status_span,
+        #qr-reader__camera_selection,
+        #qr-reader button {
+          display: none !important;
+        }
       `}</style>
       
       {/* Background Layer with Parallax-like effect */}

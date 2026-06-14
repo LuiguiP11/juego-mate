@@ -16,7 +16,7 @@ import CertificateScreen from './CertificateScreen';
 import ControlsHint from './ControlsHint';
 
 function HUD() {
-  const { lives, score, playerName, currentLevel, phase, retries, nearGateIndex, setPhase, muted, toggleMute, inventory, totalPoints, setMobileControl } = useGameStore();
+  const { lives, score, playerName, currentLevel, phase, retries, nearGateIndex, setPhase, muted, toggleMute, inventory, totalPoints, setMobileControl, graphicsQuality, setGraphicsQuality } = useGameStore();
   const level = LEVELS[currentLevel];
 
   if (phase === 'start' || phase === 'intro' || phase === 'certificate') return null;
@@ -29,8 +29,19 @@ function HUD() {
           <button 
             onClick={toggleMute}
             className="p-1 px-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
+            title={muted ? "Activar sonido" : "Silenciar sonido"}
           >
             {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+          </button>
+
+          <button 
+            onClick={() => setGraphicsQuality(graphicsQuality === 'high' ? 'low' : 'high')}
+            className={`p-1 px-2.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+              graphicsQuality === 'high' ? 'bg-orange-600/30 text-orange-400 border border-orange-500/30' : 'bg-gray-800 text-gray-400 border border-gray-700'
+            }`}
+            title="Ajustar nivel de gráficos para optimizar rendimiento"
+          >
+            {graphicsQuality === 'high' ? '💥 ALTO' : '⚡ BAJO'}
           </button>
           
           <div className="flex flex-col">
