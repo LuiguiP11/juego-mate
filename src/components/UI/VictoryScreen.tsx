@@ -61,10 +61,10 @@ export default function VictoryScreen() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_rgba(200,165,0,0.2)_0%,_#000_100%)] flex flex-col items-center justify-center p-6 pointer-events-auto"
+      className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_rgba(200,165,0,0.2)_0%,_#000_100%)] flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto"
     >
-      <div className="w-full max-w-lg text-center space-y-6 sm:space-y-8">
-        <header className="space-y-2 sm:space-y-4">
+      <div className="w-full max-w-md text-center space-y-4 sm:space-y-8">
+        <header className="space-y-1 sm:space-y-4">
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -72,28 +72,28 @@ export default function VictoryScreen() {
             className="flex justify-center"
           >
             <div className="relative">
-              <div className="absolute inset-0 bg-yellow-500 blur-3xl opacity-30 animate-pulse" />
-              <Trophy size={60} className="text-yellow-400 relative z-10 drop-shadow-[0_0_20px_rgba(255,215,0,0.6)]" />
+              <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 animate-pulse" />
+              <Trophy size={48} className="text-yellow-400 relative z-10 drop-shadow-[0_0_15px_rgba(255,215,0,0.5)] sm:size-[60px]" />
             </div>
           </motion.div>
           
-          <h1 className="text-2xl md:text-4xl font-serif font-black text-white tracking-tighter">
+          <h1 className="text-xl sm:text-2xl md:text-4xl font-serif font-black text-white tracking-tighter">
             {isLast ? "¡LEYENDA SUPREMA!" : "¡NIVEL SUPERADO!"}
           </h1>
-          <p className="text-yellow-500 font-sans tracking-[0.2em] uppercase text-[10px] font-bold">
+          <p className="text-yellow-500 font-sans tracking-[0.2em] uppercase text-[8px] sm:text-[10px] font-bold">
             Ascensión Lograda
           </p>
         </header>
 
-        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-4 sm:p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col items-center p-3 bg-black/40 rounded-xl border border-white/5">
-              <span className="text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">Explorador</span>
-              <span className="text-sm font-bold text-white">{playerName || 'Anónimo'}</span>
+        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-3 sm:p-6 space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="flex flex-col items-center p-2 sm:p-3 bg-black/40 rounded-xl border border-white/5">
+              <span className="text-[7px] sm:text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">Explorador</span>
+              <span className="text-xs sm:text-sm font-bold text-white truncate max-w-full">{playerName || 'Anónimo'}</span>
             </div>
-            <div className="flex flex-col items-center p-3 bg-black/40 rounded-xl border border-white/5">
-              <span className="text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">Artefacto</span>
-              <span className="text-sm font-bold text-yellow-500">{level.treasure}</span>
+            <div className="flex flex-col items-center p-2 sm:p-3 bg-black/40 rounded-xl border border-white/5">
+              <span className="text-[7px] sm:text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">Artefacto</span>
+              <span className="text-xs sm:text-sm font-bold text-yellow-500 truncate max-w-full">{level.treasure}</span>
             </div>
           </div>
 

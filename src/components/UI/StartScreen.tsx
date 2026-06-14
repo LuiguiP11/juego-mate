@@ -111,107 +111,136 @@ export default function StartScreen() {
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 overflow-x-hidden">
-        {/* Main Content Scaler - Forcing a more compact look */}
-        <div className="w-full flex flex-col items-center transform scale-[0.85] sm:scale-90 lg:scale-100 origin-center">
-          <header className="text-center mb-3 px-2 relative">
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              className="inline-block px-2 py-0.5 bg-gradient-to-r from-orange-600 to-red-600 rounded-full text-[6px] sm:text-[7px] font-black tracking-[0.2em] text-white mb-1 shadow-xl shadow-orange-600/40 uppercase"
-            >
-              Nueva Era de Aprendizaje
-            </motion.div>
-            <motion.h1
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-2xl sm:text-4xl md:text-5xl font-serif font-black tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
-            >
-              <span className="animate-shimmer">JHIRO'S</span> <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-yellow-300 to-orange-500 italic drop-shadow-none">ADVENTURE</span>
-            </motion.h1>
-            <p className="text-orange-200/60 font-sans tracking-[0.3em] text-[5px] sm:text-[7px] font-black uppercase mt-1">
+      <div className="relative z-10 min-h-screen flex flex-col items-center p-3 sm:p-10 lg:p-20 overflow-x-hidden justify-center">
+        {/* Decorative Floating Elements */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-orange-500/20 blur-[60px] rounded-full animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-500/20 blur-[80px] rounded-full animate-pulse delay-700" />
+        <div className="absolute top-1/2 left-1/4 animate-rune font-serif text-5xl text-white select-none pointer-events-none -rotate-12 opacity-60">∫</div>
+        <div className="absolute top-1/3 right-1/4 animate-rune delay-700 font-serif text-5xl text-white select-none pointer-events-none rotate-12 opacity-60">√</div>
+        <div className="absolute bottom-1/3 left-1/3 animate-rune delay-1000 font-serif text-3xl text-white select-none pointer-events-none rotate-45 opacity-60">π</div>
+        <header className="text-center mb-5 sm:mb-8 px-4 relative mt-2">
+          <motion.div
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="inline-block px-2.5 py-0.5 bg-gradient-to-r from-orange-600 to-red-600 rounded-full text-[7px] sm:text-[9px] font-black tracking-[0.3em] text-white mb-2 sm:mb-4 shadow-xl shadow-orange-600/40 uppercase animate-pulse"
+          >
+            Nueva Era de Aprendizaje
+          </motion.div>
+          <motion.h1
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-2xl xs:text-3xl sm:text-5xl md:text-6xl font-serif font-black tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+          >
+            <span className="animate-shimmer">JHIRO'S</span> <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-yellow-300 to-orange-500 italic drop-shadow-none">ADVENTURE</span>
+          </motion.h1>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <div className="h-[1px] w-4 sm:w-10 bg-gradient-to-r from-transparent to-orange-500/50" />
+            <p className="text-orange-200 font-sans tracking-[0.15em] sm:tracking-[0.4em] text-[5px] sm:text-[8px] font-black uppercase leading-none">
               El Templo de los Siete Sabios
             </p>
-          </header>
+            <div className="h-[1px] w-4 sm:w-10 bg-gradient-to-l from-transparent to-orange-500/50" />
+          </div>
+        </header>
 
-          <div className="w-full max-w-sm bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[1.2rem] p-4 sm:p-5 space-y-4 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-            <div className="space-y-1.5">
-              <label className="text-[6px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1">
-                <User size={8} className="text-orange-500" />
-                Ingresa al Santuario
-              </label>
-              <div className="flex gap-2">
+        <div className="w-[94%] sm:w-full max-w-sm bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-[2rem] p-3 sm:p-6 space-y-3 sm:space-y-5 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+          <div className="space-y-2">
+            <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1">
+              <User size={8} className="text-orange-500" />
+              Ingresa al Santuario
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1 group">
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Tu Nombre de Héroe"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white focus:border-orange-500 outline-none transition-all font-serif text-xs sm:text-sm placeholder:text-white/20"
+                  className="w-full bg-white/5 border-2 border-white/10 rounded-lg sm:rounded-xl px-3 py-1.5 sm:px-4 sm:py-2.5 text-white focus:border-orange-500 outline-none transition-all font-serif text-xs sm:text-base placeholder:text-white/20"
                 />
-                <button
-                  onClick={startQRScanner}
-                  className="p-2 bg-orange-600 rounded-lg text-white hover:bg-orange-500 transition-all flex items-center justify-center active:scale-95"
-                >
-                  <QrCode size={16} />
-                </button>
+                <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
               </div>
+              <button
+                onClick={startQRScanner}
+                className="p-2 sm:p-3 bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg sm:rounded-xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group cursor-pointer"
+                title="Escanear con QR"
+              >
+                <QrCode size={18} className="group-hover:rotate-12 transition-transform" />
+              </button>
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[6px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1">
-                 <Trophy size={8} className="text-yellow-500" />
-                 Selecciona tu Destino
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setGender('male')}
-                  className={`group relative p-2 rounded-lg border transition-all flex flex-col items-center gap-1 active:scale-95 ${
-                    gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white' : 'bg-white/5 border-white/10 text-white/40'
-                  }`}
-                >
-                  <Sword size={12} className={gender === 'male' ? 'text-orange-500' : ''} />
-                  <span className="text-[7px] font-black uppercase tracking-widest">Guerrero</span>
-                </button>
-                <button
-                  onClick={() => setGender('female')}
-                  className={`group relative p-2 rounded-lg border transition-all flex flex-col items-center gap-1 active:scale-95 ${
-                    gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white' : 'bg-white/5 border-white/10 text-white/40'
-                  }`}
-                >
-                  <Shield size={12} className={gender === 'female' ? 'text-purple-500' : ''} />
-                  <span className="text-[7px] font-black uppercase tracking-widest">Mística</span>
-                </button>
-              </div>
-            </div>
-
-            <button
-               onClick={handleStart}
-               className="w-full py-2 bg-white text-black rounded-lg font-serif text-xs sm:text-sm font-black uppercase tracking-[0.2em] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 group"
-            >
-              <Play size={10} fill="currentColor" />
-              INICIAR CRÓNICA
-            </button>
+            {error && <p className="text-red-400 text-[9px] font-black animate-shake text-center">{error}</p>}
           </div>
 
-          {/* Level Rail - Compacted */}
-          <div className="w-full max-w-3xl mt-6 relative px-4">
-            <div className="flex items-end justify-between mb-2">
-              <h3 className="text-white font-serif text-xs sm:text-sm font-black uppercase tracking-tighter">Expediciones</h3>
-              <span className="text-[6px] sm:text-[7px] text-white/40 font-mono">{unlockedLevels}/{LEVELS.length}</span>
+          <div className="space-y-2">
+            <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+               <Trophy size={8} className="text-yellow-500" />
+               Selecciona tu Destino
+            </label>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <button
+                onClick={() => setGender('male')}
+                className={`group relative p-2 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 active:scale-95 overflow-hidden cursor-pointer ${
+                  gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-7 h-7 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-105' : 'bg-white/10'}`}>
+                   <Sword size={12} className="sm:size-5" />
+                </div>
+                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em]">Guerrero</span>
+                {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
+              </button>
+              <button
+                onClick={() => setGender('female')}
+                className={`group relative p-2 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 active:scale-95 overflow-hidden cursor-pointer ${
+                  gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-7 h-7 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-105' : 'bg-white/10'}`}>
+                   <Shield size={12} className="sm:size-5" />
+                </div>
+                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em]">Mística</span>
+                {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
+               </button>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-4 snap-x no-scrollbar">
-              {LEVELS.map((lv, i) => {
-                const unlocked = i < unlockedLevels;
-                return (
-                  <button
-                    key={lv.id}
-                    disabled={!unlocked}
-                    onClick={() => setSelectedLevel(i)}
-                    className={`flex-shrink-0 w-24 sm:w-32 aspect-[3/4] rounded-xl p-2 flex flex-col justify-end relative shadow-xl transition-all snap-start overflow-hidden ${
-                      selectedLevel === i ? 'ring-2 ring-orange-500 scale-105' : 'scale-100 opacity-60'
-                    } ${!unlocked ? 'bg-black/80 grayscale cursor-not-allowed' : 'bg-black'}`}
-                  >
+          </div>
+
+          <div className="pt-1.5 sm:pt-3">
+            <motion.button
+               whileHover={{ scale: 1.02 }}
+               whileTap={{ scale: 0.98 }}
+               onClick={handleStart}
+               className="w-full py-2.5 sm:py-3.5 bg-white text-black rounded-xl sm:rounded-2xl font-serif text-xs sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_15px_40px_rgba(255,255,255,0.05)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 sm:gap-3 group cursor-pointer"
+            >
+              <div className="w-5 h-5 sm:w-7 sm:h-7 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
+                <Play size={10} fill="currentColor" className="ml-0.5" />
+              </div>
+              INICIAR CRÓNICA
+            </motion.button>
+          </div>
+               {/* Level Rail - Refined Anime Style - Compacted */}
+        <div className="w-full max-w-5xl mt-5 sm:mt-12 relative px-4 sm:px-8">
+          <div className="flex items-end justify-between mb-3 sm:mb-6">
+            <div className="space-y-1">
+              <h3 className="text-white font-serif text-base sm:text-2xl font-black uppercase tracking-tighter">Expediciones</h3>
+              <div className="h-0.5 w-8 sm:w-16 bg-orange-600 rounded-full" />
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[6px] sm:text-[9px] text-orange-500 font-black tracking-widest uppercase">Progreso</span>
+              <span className="text-xs sm:text-base font-mono text-white/80">{unlockedLevels}/{LEVELS.length}</span>
+            </div>
+          </div>
+          <div className="flex gap-3 sm:gap-5 overflow-x-auto pb-4 sm:pb-10 snap-x no-scrollbar">
+            {LEVELS.map((lv, i) => {
+              const unlocked = i < unlockedLevels;
+              return (
+                <button
+                  key={lv.id}
+                  disabled={!unlocked}
+                  onClick={() => setSelectedLevel(i)}
+                  className={`flex-shrink-0 w-32 xs:w-40 sm:w-64 aspect-[4/5] rounded-xl sm:rounded-[2rem] p-3 sm:p-6 flex flex-col justify-end relative shadow-2xl transition-all snap-start overflow-hidden group/card cursor-pointer ${
+                    selectedLevel === i ? 'ring-2 ring-orange-500 scale-105 z-10' : 'scale-100'
+                  } ${!unlocked ? 'bg-[#120a05] grayscale opacity-40 cursor-not-allowed' : 'bg-black'}`}
+                >
                   <div className="absolute inset-0 z-0">
                      <img 
                        src={`https://picsum.photos/seed/${lv.theme}/600/800`} 
@@ -226,30 +255,30 @@ export default function StartScreen() {
                      </div>
                   </div>
                   
-                  <div className="relative z-10 flex flex-col gap-2">
-                    <div className="flex items-center gap-1.5">
-                       <span className="w-4 h-[1px] bg-orange-500" />
-                       <span className="text-[8px] text-orange-500 font-black tracking-[0.3em] uppercase">Nivel 0{i + 1}</span>
+                  <div className="relative z-10 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1">
+                       <span className="w-3 h-[1px] bg-orange-500" />
+                       <span className="text-[7px] text-orange-500 font-black tracking-[0.3em] uppercase">Nivel 0{i + 1}</span>
                     </div>
-                    <h4 className="text-white font-serif text-lg sm:text-xl font-black leading-none uppercase tracking-tighter">{lv.name}</h4>
-                    <p className="text-white/40 text-[8px] font-bold tracking-widest uppercase mb-1">{lv.theme}</p>
+                    <h4 className="text-white font-serif text-xs xs:text-sm sm:text-xl font-black leading-none uppercase tracking-tighter">{lv.name}</h4>
+                    <p className="text-white/40 text-[7px] font-bold tracking-widest uppercase mb-0.5">{lv.theme}</p>
                     
-                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-white/5">
-                      <span className="text-[7px] text-orange-200/40 font-black tracking-widest uppercase">
+                    <div className="flex items-center justify-between mt-0.5 pt-2 border-t border-white/5">
+                      <span className="text-[6px] text-orange-200/40 font-black tracking-widest uppercase">
                         {unlocked ? (selectedLevel === i ? 'Misión Activa' : 'Explorar') : 'Cerrado'}
                       </span>
                       {unlocked && (
-                        <div className={`p-1.5 rounded-full transition-colors ${selectedLevel === i ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/40'}`}>
-                           <ChevronRight size={12} />
+                        <div className={`p-1 rounded-full transition-colors ${selectedLevel === i ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/40'}`}>
+                           <ChevronRight size={10} />
                         </div>
                       )}
                     </div>
                   </div>
-
+ 
                   {!unlocked && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                       <div className="p-4 bg-white/5 rounded-full border border-white/10">
-                          <Lock size={32} className="text-white/20" />
+                       <div className="p-3 bg-white/5 rounded-full border border-white/10">
+                          <Lock size={20} className="text-white/20" />
                        </div>
                     </div>
                   )}
@@ -258,6 +287,7 @@ export default function StartScreen() {
             })}
           </div>
         </div>
+   </div>
       </div>
 
       {/* QR Modal Overlay */}

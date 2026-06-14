@@ -17,30 +17,30 @@ export default function GameOverScreen() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_#200_0%,_#000_100%)] flex flex-col items-center justify-center p-6 pointer-events-auto"
+      className="fixed inset-0 z-[300] bg-[radial-gradient(circle_at_center,_#200_0%,_#000_100%)] flex flex-col items-center justify-center p-4 sm:p-6 pointer-events-auto"
     >
-      <div className="w-full max-w-md text-center space-y-8 transform scale-[0.8]">
-        <header className="space-y-4">
+      <div className="w-full max-w-sm text-center space-y-4 sm:space-y-8">
+        <header className="space-y-2 sm:space-y-4">
           <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             className="flex justify-center"
           >
             <div className="relative">
-              <div className="absolute inset-0 bg-red-600 blur-3xl opacity-20 animate-pulse" />
-              <Skull size={60} className="text-red-500 relative z-10" />
+              <div className="absolute inset-0 bg-red-600 blur-2xl opacity-15 animate-pulse" />
+              <Skull size={44} className="text-red-500 relative z-10 sm:size-[60px]" />
             </div>
           </motion.div>
           
-          <h1 className="text-xl font-serif font-black text-white tracking-tight uppercase">
+          <h1 className="text-xl sm:text-3xl font-serif font-black text-white tracking-tight uppercase">
             {hasRetries ? "Sin Aliento" : "Fin del Camino"}
           </h1>
-          <p className="text-red-600 font-sans tracking-[0.2em] uppercase text-[10px] font-black">
+          <p className="text-red-600 font-sans tracking-[0.2em] uppercase text-[8px] sm:text-[10px] font-black">
             Expedición Detenida
           </p>
         </header>
 
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-5 backdrop-blur-md space-y-6">
+        <div className="bg-white/5 border border-white/5 rounded-2xl p-4 sm:p-5 backdrop-blur-md space-y-4 sm:space-y-6">
           <div className="space-y-2">
             <p className="text-gray-400 text-xs leading-relaxed italic">
               "Incluso los grandes exploradores deben saber cuándo reagruparse..."

@@ -61,10 +61,16 @@ export default function Player() {
     timeRef.current += delta;
     const time = timeRef.current;
 
-    const { forward, backward, left, right, jump: kbJump, interact: kbInteract } = getKeys();
-    const { joystick, jumpPressed, interactPressed } = useGameStore.getState();
-    const jump = kbJump || jumpPressed;
-    const interact = kbInteract || interactPressed;
+    const keys = getKeys();
+    const mobile = useGameStore.getState().mobileControls || { forward: false, backward: false, left: false, right: false, jump: false };
+
+    const forward = keys.forward || mobile.forward;
+    const backward = keys.backward || mobile.backward;
+    const left = keys.left || mobile.left;
+    const right = keys.right || mobile.right;
+    const jump = keys.jump || mobile.jump;
+    const interact = keys.interact;
+    
     const gates = useGameStore.getState().score; // Number of solved gates
 
     // Interaction check
@@ -75,16 +81,10 @@ export default function Player() {
     // Horizontal Movement
     let dx = 0;
     let dz = 0;
-
-    if (joystick.active) {
-      dx = joystick.x * MOVE_SPEED;
-      dz = joystick.y * MOVE_SPEED;
-    } else {
-      if (forward) dz -= MOVE_SPEED;
-      if (backward) dz += MOVE_SPEED * 0.6;
-      if (left) dx -= MOVE_SPEED * 0.7;
-      if (right) dx += MOVE_SPEED * 0.7;
-    }
+    if (forward) dz -= MOVE_SPEED;
+    if (backward) dz += MOVE_SPEED * 0.6;
+    if (left) dx -= MOVE_SPEED * 0.7;
+    if (right) dx += MOVE_SPEED * 0.7;
 
     velocity.current.x = dx;
     velocity.current.z = dz;
@@ -156,20 +156,15 @@ export default function Player() {
     }
 
     // --- TRAP COLLISIONS ---
-    const currentLevelIdx = useGameStore.getState().currentLevel;
-    const isInvulnerable = useGameStore.getState().isInvulnerable;
-    
-    if (currentLevelIdx >= 1) {
-        const corridorLen = 45;
-        const trapsCount = 2 + currentLevelIdx;
-        
-        for(let i = 0; i < trapsCount; i++) {
-            const trapZ = -(i + 1) * (corridorLen / (trapsCount + 1)) - 10;
+    if (useGameStore.getState().currentLevel >= 1) {
+        for(let i = 0; i < 3; i++) {
+            const trapZ = -(i + 1) * 15 - 5;
             const dist = Math.sqrt(Math.pow(position.current.x, 2) + Math.pow(position.current.z - trapZ, 2));
             
             // Basic proximity check for simplified collisions
             if (dist < 1.2) {
-                const levelMetadata = LEVELS[currentLevelIdx];
+                const currentLevelIdx = useGameStore.getState().currentLevel;
+                const levelMetadata = useGameStore.getState().currentLevel !== null ? LEVELS[currentLevelIdx] : null;
                 const isWaterLevel = levelMetadata?.theme === 'water';
                 const isCaveLevel = levelMetadata?.theme === 'cave';
                 const isPendulum = !isAbyss && !isWaterLevel && !isCaveLevel;
@@ -185,7 +180,7 @@ export default function Player() {
                     if (cycle > 0.6) hit = true;
                 }
 
-                if (hit && !isInvulnerable) {
+                if (hit) {
                     // Push back and damage
                     useGameStore.getState().solvePuzzle(false);
                     position.current.z += 2;
@@ -221,13 +216,6 @@ export default function Player() {
       if (dz > 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, Math.PI, 0.2);
       if (dx < 0 && dz === 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, Math.PI * 0.5, 0.2);
       if (dx > 0 && dz === 0) group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, -Math.PI * 0.5, 0.2);
-
-      // Invulnerability effect (flicker)
-      if (isInvulnerable) {
-        group.current.visible = Math.floor(time * 20) % 2 === 0;
-      } else {
-        group.current.visible = true;
-      }
     }
 
     // Animation updates...

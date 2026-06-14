@@ -5,9 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, DoorOpen, User, Trophy, MapPin, RefreshCcw, Volume2, VolumeX, Zap } from 'lucide-react';
+import { Heart, DoorOpen, User, Trophy, MapPin, RefreshCcw, Volume2, VolumeX, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowUp } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
-import Joystick from './Joystick';
 import StartScreen from './StartScreen';
 import IntroScreen from './IntroScreen';
 import PuzzleOverlay from './PuzzleOverlay';
@@ -16,60 +15,20 @@ import VictoryScreen from './VictoryScreen';
 import CertificateScreen from './CertificateScreen';
 import ControlsHint from './ControlsHint';
 
-function MobileControls() {
-  const { phase, setJump, setInteract, nearGateIndex, setPhase } = useGameStore();
-
-  if (phase !== 'playing') return null;
-
-  return (
-    <div className="fixed bottom-10 right-10 z-[100] flex flex-col items-center gap-4 pointer-events-auto sm:hidden">
-      {/* Interact Button (contextual) */}
-      <AnimatePresence>
-        {nearGateIndex !== null && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            onClick={() => setPhase('puzzle')}
-            className="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-[0_6px_0_rgb(30,64,175)] active:translate-y-1 active:shadow-none transition-all"
-          >
-            <Zap size={32} fill="white" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Jump Button */}
-      <button
-        onTouchStart={() => setJump(true)}
-        onTouchEnd={() => setJump(false)}
-        onMouseDown={() => setJump(true)}
-        onMouseUp={() => setJump(false)}
-        className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white shadow-[0_8px_0_rgb(154,52,18)] active:translate-y-1 active:shadow-none transition-all"
-      >
-        <div className="w-10 h-10 border-4 border-white/40 rounded-full flex items-center justify-center">
-           <div className="w-4 h-4 bg-white rounded-full" />
-        </div>
-      </button>
-    </div>
-  );
-}
-
 function HUD() {
-  const { lives, score, playerName, currentLevel, phase, retries, nearGateIndex, setPhase, muted, toggleMute, inventory, totalPoints } = useGameStore();
+  const { lives, score, playerName, currentLevel, phase, retries, nearGateIndex, setPhase, muted, toggleMute, inventory, totalPoints, setMobileControl } = useGameStore();
   const level = LEVELS[currentLevel];
 
   if (phase === 'start' || phase === 'intro' || phase === 'certificate') return null;
 
   return (
     <div className="fixed inset-x-0 top-0 z-50 pointer-events-none h-full">
-      <Joystick />
-      <MobileControls />
       {/* Top Bar - Compact version */}
       <div className="flex items-center justify-between px-3 md:px-6 py-1 md:py-2 bg-black/60 backdrop-blur-md border-b border-orange-500/30 pointer-events-auto">
         <div className="flex items-center gap-2 md:gap-4">
           <button 
             onClick={toggleMute}
-            className="p-1 px-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+            className="p-1 px-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
             {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
           </button>
@@ -117,28 +76,108 @@ function HUD() {
         </div>
       </div>
 
-      {/* Interact Hint / Desktop Hint */}
+      {/* Interact Hint / Mobile Button */}
       <AnimatePresence>
         {phase === 'playing' && nearGateIndex !== null && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-2"
+            className="fixed bottom-24 lg:bottom-20 left-1/2 -translate-x-1/2 pointer-events-auto flex flex-col items-center gap-2"
           >
-            <div className="px-4 py-2 bg-black/80 backdrop-blur-xl border border-orange-500 rounded-xl flex items-center gap-4 shadow-[0_0_20px_rgba(249,115,22,0.4)]">
+            <div 
+              onClick={() => setPhase('puzzle')}
+              className="cursor-pointer px-4 py-2 bg-black/80 backdrop-blur-xl border border-orange-500 rounded-xl flex items-center gap-4 shadow-[0_0_20px_rgba(249,115,22,0.4)]"
+            >
                <div className="flex flex-col">
                   <span className="text-[10px] text-orange-400 font-black uppercase tracking-widest leading-none">¡SIGILO ACTIVADO!</span>
                   <span className="text-white text-sm font-black tracking-tight underline decoration-orange-500">PÁRATE EN EL CÍRCULO</span>
                </div>
-               <div className="hidden sm:flex w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg items-center justify-center text-white text-lg sm:text-xl font-black shadow-[0_4px_0_rgb(154,52,18)]">
+               <button 
+                onClick={(e) => { e.stopPropagation(); setPhase('puzzle'); }}
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center text-white text-lg sm:text-xl font-black shadow-[0_4px_0_rgb(154,52,18)] transition-transform active:translate-y-1 active:shadow-none cursor-pointer"
+               >
                  E
-               </div>
+               </button>
             </div>
-            <p className="hidden sm:block text-[8px] text-gray-500 uppercase font-bold tracking-widest">Presiona 'E' para interactuar</p>
+            <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Presiona 'E' o toca el cuadro</p>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Virtual Controller Overlay (Hidden on desktop / active on touch screen or smaller screens) */}
+      {phase === 'playing' && (
+        <div className="absolute inset-x-0 bottom-0 top-auto z-40 h-48 pointer-events-none lg:hidden select-none">
+          {/* Movement D-Pad (Left Side) */}
+          <div className="absolute bottom-4 left-4 flex flex-col items-center gap-1 pointer-events-auto">
+            {/* Forward */}
+            <button 
+              onTouchStart={() => setMobileControl('forward', true)}
+              onTouchEnd={() => setMobileControl('forward', false)}
+              onTouchCancel={() => setMobileControl('forward', false)}
+              onMouseDown={() => setMobileControl('forward', true)}
+              onMouseUp={() => setMobileControl('forward', false)}
+              onMouseLeave={() => setMobileControl('forward', false)}
+              className="w-11 h-11 bg-black/60 active:bg-orange-600/80 border border-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-md active:scale-90 transition-all cursor-pointer"
+            >
+              <ChevronUp size={22} />
+            </button>
+            {/* Row for Left & Right */}
+            <div className="flex gap-11">
+              <button 
+                onTouchStart={() => setMobileControl('left', true)}
+                onTouchEnd={() => setMobileControl('left', false)}
+                onTouchCancel={() => setMobileControl('left', false)}
+                onMouseDown={() => setMobileControl('left', true)}
+                onMouseUp={() => setMobileControl('left', false)}
+                onMouseLeave={() => setMobileControl('left', false)}
+                className="w-11 h-11 bg-black/60 active:bg-orange-600/80 border border-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-md active:scale-90 transition-all cursor-pointer"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button 
+                onTouchStart={() => setMobileControl('right', true)}
+                onTouchEnd={() => setMobileControl('right', false)}
+                onTouchCancel={() => setMobileControl('right', false)}
+                onMouseDown={() => setMobileControl('right', true)}
+                onMouseUp={() => setMobileControl('right', false)}
+                onMouseLeave={() => setMobileControl('right', false)}
+                className="w-11 h-11 bg-black/60 active:bg-orange-600/80 border border-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-md active:scale-90 transition-all cursor-pointer"
+              >
+                <ChevronRight size={22} />
+              </button>
+            </div>
+            {/* Backward */}
+            <button 
+              onTouchStart={() => setMobileControl('backward', true)}
+              onTouchEnd={() => setMobileControl('backward', false)}
+              onTouchCancel={() => setMobileControl('backward', false)}
+              onMouseDown={() => setMobileControl('backward', true)}
+              onMouseUp={() => setMobileControl('backward', false)}
+              onMouseLeave={() => setMobileControl('backward', false)}
+              className="w-11 h-11 bg-black/60 active:bg-orange-600/80 border border-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-md active:scale-90 transition-all cursor-pointer"
+            >
+              <ChevronDown size={22} />
+            </button>
+          </div>
+
+          {/* Jump Button (Right Side) */}
+          <div className="absolute bottom-4 right-4 pointer-events-auto">
+            <button 
+              onTouchStart={() => setMobileControl('jump', true)}
+              onTouchEnd={() => setMobileControl('jump', false)}
+              onTouchCancel={() => setMobileControl('jump', false)}
+              onMouseDown={() => setMobileControl('jump', true)}
+              onMouseUp={() => setMobileControl('jump', false)}
+              onMouseLeave={() => setMobileControl('jump', false)}
+              className="w-14 h-14 bg-gradient-to-tr from-orange-600 to-red-600 active:from-orange-500 active:to-red-500 border border-orange-500/20 rounded-full flex flex-col items-center justify-center text-white shadow-lg active:scale-95 transition-all cursor-pointer"
+            >
+              <ArrowUp size={18} className="animate-bounce" />
+              <span className="text-[7px] font-black tracking-widest uppercase mt-0.5 leading-none">Saltar</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tutorial */}
       {phase === 'playing' && <ControlsHint />}
