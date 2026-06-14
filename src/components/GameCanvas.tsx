@@ -60,7 +60,13 @@ export default function GameCanvas() {
       ]}
     >
       <div className="w-full h-full bg-black">
-        <Canvas gl={{ antialias: true }}>
+        <Canvas 
+          dpr={[1, 1.5]}
+          gl={{ 
+            antialias: true, 
+            powerPreference: 'high-performance'
+          }}
+        >
           <Suspense fallback={null}>
             <PerspectiveCamera makeDefault position={[0, 4, 8]} fov={60} />
             <CameraFollow />

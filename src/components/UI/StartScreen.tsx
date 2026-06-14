@@ -9,6 +9,96 @@ import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Tr
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 
+interface QRScannerModalProps {
+  onSuccess: (text: string) => void;
+  onClose: () => void;
+  onError: (errMsg: string) => void;
+}
+
+function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
+  useEffect(() => {
+    let html5QrCode: Html5Qrcode | null = null;
+    let isMounted = true;
+
+    const initScanner = async () => {
+      // Short delay for DOM and modal transitions to complete
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (!isMounted) return;
+
+      const element = document.getElementById("qr-reader");
+      if (!element) {
+        console.error("qr-reader element not found");
+        return;
+      }
+
+      try {
+        html5QrCode = new Html5Qrcode("qr-reader");
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { 
+            fps: 10, 
+            qrbox: (width, height) => {
+              const min = Math.min(width, height);
+              const size = Math.floor(min * 0.75); // 75% of container
+              return { width: size, height: size };
+            }
+          },
+          (decodedText) => {
+            if (isMounted) {
+              onSuccess(decodedText);
+            }
+          },
+          () => {} // silent verbosity
+        );
+      } catch (err) {
+        console.error("Camera access error:", err);
+        if (isMounted) {
+          onError("No se pudo acceder a la cámara. Asegúrate de otorgar los permisos necesarios.");
+          onClose();
+        }
+      }
+    };
+
+    initScanner();
+
+    return () => {
+      isMounted = false;
+      const stopScanner = async () => {
+        if (html5QrCode) {
+          try {
+            if (html5QrCode.isScanning) {
+              await html5QrCode.stop();
+            }
+          } catch (e) {
+            console.error("Error stopping scanner on cleanup:", e);
+          }
+        }
+      };
+      stopScanner();
+    };
+  }, [onSuccess, onClose, onError]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl"
+    >
+      <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)] animate-panic">
+        <div id="qr-reader" className="w-full h-full" />
+        <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)]" />
+      </div>
+      <button
+        onClick={onClose}
+        className="mt-12 px-10 py-4 bg-red-600/20 border-2 border-red-600 text-red-500 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-red-600 hover:text-white transition-all active:scale-95 cursor-pointer"
+      >
+        Cancelar Escaneo
+      </button>
+    </motion.div>
+  );
+}
+
 export default function StartScreen() {
   const { 
     playerName, 
@@ -35,28 +125,9 @@ export default function StartScreen() {
     setPhase('intro'); // Go to intro first
   };
 
-  const startQRScanner = async () => {
+  const startQRScanner = () => {
     setScanning(true);
     setError('');
-    
-    setTimeout(async () => {
-      const html5QrCode = new Html5Qrcode("qr-reader");
-      try {
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText) => {
-            setName(decodedText);
-            setScanning(false);
-            html5QrCode.stop();
-          },
-          () => {}
-        );
-      } catch (err) {
-        setScanning(false);
-        setError('No se pudo acceder a la cámara');
-      }
-    }, 100);
   };
 
   return (
@@ -293,25 +364,14 @@ export default function StartScreen() {
       {/* QR Modal Overlay */}
       <AnimatePresence>
         {scanning && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl"
-          >
-            <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)]">
-              <div id="qr-reader" className="w-full h-full" />
-              <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-pulse" />
-            </div>
-            <button
-              onClick={() => {
-                setScanning(false);
-              }}
-              className="mt-12 px-10 py-4 bg-red-600/20 border-2 border-red-600 text-red-500 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-red-600 hover:text-white transition-all active:scale-95"
-            >
-              Cancelar Escaneo
-            </button>
-          </motion.div>
+          <QRScannerModal 
+            onSuccess={(decodedText) => {
+              setName(decodedText);
+              setScanning(false);
+            }}
+            onClose={() => setScanning(false)}
+            onError={(msg) => setError(msg)}
+          />
         )}
       </AnimatePresence>
 

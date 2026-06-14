@@ -39,7 +39,7 @@ function Torch({ position }: { position: [number, number, number] }) {
   );
 }
 
-function Gate({ index, z, solved, theme }: { index: number, z: number, solved: boolean, theme: string }) {
+function Gate({ index, z, solved, theme, active }: { index: number, z: number, solved: boolean, theme: string, active: boolean }) {
   const doorRef = useRef<any>(null);
   const [opacity, setOpacity] = useState(1);
   
@@ -82,17 +82,17 @@ function Gate({ index, z, solved, theme }: { index: number, z: number, solved: b
       </mesh>
 
       {/* Tribal Interaction Circle - Ancient Mystic Design with High Contrast */}
-      {!solved && (
+      {!solved && active && (
         <group position={[0, 0.05, 1.5]}>
             {/* Outer Decorative Ring with "Teeth" */}
             <group rotation={[-Math.PI / 2, 0, 0]}>
                 <mesh>
-                    <ringGeometry args={[0.8, 0.85, 32]} />
+                    <ringGeometry args={[0.8, 0.85, 16]} />
                     <meshBasicMaterial color={colors.primary} transparent opacity={0.6} blending={AdditiveBlending} />
                 </mesh>
                 {/* Tribal Sigils around the ring */}
-                {[...Array(12)].map((_, i) => (
-                    <mesh key={i} rotation={[0, 0, (i / 12) * Math.PI * 2]} position={[0.82, 0, 0]}>
+                {[...Array(6)].map((_, i) => (
+                    <mesh key={i} rotation={[0, 0, (i / 6) * Math.PI * 2]} position={[0.82, 0, 0]}>
                         <boxGeometry args={[0.05, 0.1, 0.03]} />
                         <meshBasicMaterial color={colors.secondary} transparent opacity={0.9} />
                     </mesh>
@@ -102,30 +102,30 @@ function Gate({ index, z, solved, theme }: { index: number, z: number, solved: b
             {/* Inner Runic Orbit */}
             <group rotation={[-Math.PI / 2, 0, 0]}>
                 <mesh>
-                    <ringGeometry args={[0.5, 0.55, 32]} />
+                    <ringGeometry args={[0.5, 0.55, 16]} />
                     <meshBasicMaterial color={colors.primary} transparent opacity={0.5} blending={AdditiveBlending} />
                 </mesh>
                 {/* Floating Math Runes in a circle */}
-                {[...Array(6)].map((_, i) => (
+                {[...Array(4)].map((_, i) => (
                     <Text
                         key={`rune-${i}`}
-                        position={[Math.cos((i / 6) * Math.PI * 2) * 0.65, Math.sin((i / 6) * Math.PI * 2) * 0.65, 0.01]}
+                        position={[Math.cos((i / 4) * Math.PI * 2) * 0.65, Math.sin((i / 4) * Math.PI * 2) * 0.65, 0.01]}
                         fontSize={0.12}
                         color={colors.secondary}
                         fillOpacity={0.9}
                     >
-                        {['Σ', 'π', 'Ω', '∆', '√', '∞'][i]}
+                        {['Σ', 'π', 'Ω', '√'][i]}
                     </Text>
                 ))}
             </group>
 
             {/* Core Glow - "Eye of Knowledge" with White Hot Core for Contrast */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[0.4, 32]} />
+                <circleGeometry args={[0.4, 16]} />
                 <meshBasicMaterial color={colors.primary} transparent opacity={0.3} blending={AdditiveBlending} />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.01]}>
-                <circleGeometry args={[0.1, 32]} />
+                <circleGeometry args={[0.1, 16]} />
                 <meshBasicMaterial color="#ffffff" transparent opacity={0.8} blending={AdditiveBlending} />
             </mesh>
             <pointLight intensity={6} color={colors.glow} distance={8} />
@@ -139,6 +139,15 @@ function Gate({ index, z, solved, theme }: { index: number, z: number, solved: b
                 <pointLight intensity={3} color={colors.secondary} distance={3} />
             </Float>
         </group>
+      )}
+
+      {!solved && !active && (
+         <group position={[0, 0.05, 1.5]}>
+             <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                 <ringGeometry args={[0.4, 0.45, 8]} />
+                 <meshBasicMaterial color={colors.primary} transparent opacity={0.2} />
+             </mesh>
+         </group>
       )}
 
       {/* Main Arch Frame */}
@@ -447,17 +456,11 @@ function Particles({ count = 80, theme }: { count?: number, theme: string }) {
     timeRef.current += delta;
     if (pointsRef.current) {
         const time = timeRef.current;
-        const positions = pointsRef.current.geometry.attributes.position.array;
-        for (let i = 0; i < count; i++) {
-            const ix = i * 3;
-            const iy = i * 3 + 1;
-            positions[iy] += Math.sin(time + positions[ix]) * 0.005;
-            if (theme === 'water') {
-                positions[iy] += 0.01; // Bubbles float up
-                if (positions[iy] > 6) positions[iy] = 0;
-            }
+        pointsRef.current.position.y = Math.sin(time * 0.5) * 0.15;
+        pointsRef.current.rotation.y = time * 0.02;
+        if (theme === 'water') {
+            pointsRef.current.position.y = (time * 0.2) % 6;
         }
-        pointsRef.current.geometry.attributes.position.needsUpdate = true;
     }
   });
 
@@ -619,8 +622,8 @@ export default function World() {
                 <boxGeometry args={[0.4, 7, 0.8]} />
                 <meshPhongMaterial color={isCrystal ? "#2a0055" : "#1a1a1a"} />
             </mesh>
-            {isCrystal && (
-                <pointLight position={[0, 4, 0]} intensity={0.5} color="#8800ff" distance={8} />
+            {isCrystal && i % 3 === 0 && (
+                <pointLight position={[0, 4, 0]} intensity={1.5} color="#8800ff" distance={12} />
             )}
         </group>
       ))}
@@ -648,10 +651,10 @@ export default function World() {
       </mesh>
 
       {/* Torches */}
-      {[...Array(8)].map((_, i) => (
+      {[...Array(5)].map((_, i) => (
         <group key={i}>
-          <Torch position={[-3.6, 2.5, -i * 8 - 2]} />
-          <Torch position={[3.6, 2.5, -i * 8 - 6]} />
+          <Torch position={[-3.6, 2.5, -i * 12 - 2]} />
+          <Torch position={[3.6, 2.5, -i * 12 - 6]} />
         </group>
       ))}
 
@@ -666,6 +669,7 @@ export default function World() {
           z={-(i + 1) * gateSpacing - 3} 
           solved={i < score} 
           theme={level.theme}
+          active={i === score}
         />
       ))}
 
