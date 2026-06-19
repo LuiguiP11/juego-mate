@@ -237,7 +237,30 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         try {
           const cameras = await Html5Qrcode.getCameras();
           if (cameras && cameras.length > 0) {
-            const selectedCameraId = cameras[cameras.length - 1].id;
+            // Prioritize main rear-facing camera to avoid macro/wide lenses with fixed close focus
+            let selectedCamera = cameras.find(c => {
+              const label = c.label.toLowerCase();
+              const isRear = label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
+              const isMain = label.includes('main') || label.includes('primaria') || label.includes('0') || (!label.includes('wide') && !label.includes('tele') && !label.includes('macro'));
+              return isRear && isMain;
+            });
+
+            // Fallback 2: Any back/rear camera in list
+            if (!selectedCamera) {
+              selectedCamera = cameras.find(c => {
+                const label = c.label.toLowerCase();
+                return label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
+              });
+            }
+
+            // Fallback 3: First available camera (usually main standard camera)
+            if (!selectedCamera) {
+              selectedCamera = cameras[0];
+            }
+
+            const selectedCameraId = selectedCamera.id;
+            console.log("Iniciando escáner con cámara recomendada:", selectedCamera.label, "ID:", selectedCameraId);
+
             const scanner = html5QrCodeRef.current || new Html5Qrcode("qr-reader");
             html5QrCodeRef.current = scanner;
 
@@ -335,8 +358,8 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
             <div className="qr-scanner-overlay">
               <div className="qr-scanner-overlay-inner" />
             </div>
-            {/* Animated Laser Scanning Line */}
-            <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,1)] animate-scanline pointer-events-none z-[25]" />
+            {/* Animated Laser Scanning Line - Intensive Glowing Green sweeping from top (0%) to bottom (100%) */}
+            <div className="absolute inset-x-0 h-1.5 bg-[#22c55e] shadow-[0_0_15px_#22c55e,0_0_30px_#39ff14,0_0_50px_#39ff14] animate-qr-scanline pointer-events-none z-[25] top-0" />
           </>
         )}
       </div>
@@ -596,11 +619,17 @@ export default function StartScreen() {
           0% { transform: translateY(-100%); }
           100% { transform: translateY(100%); }
         }
+        @keyframes qr-scanline {
+          0% { top: 2%; opacity: 0.4; }
+          50% { opacity: 1; }
+          100% { top: 98%; opacity: 0.4; }
+        }
         @keyframes panic-glow {
           0%, 100% { box-shadow: 0 0 20px rgba(255, 165, 0, 0.2); }
           50% { box-shadow: 0 0 40px rgba(255, 165, 0, 0.5); }
         }
         .animate-scanline { animation: scanline 2s linear infinite; }
+        .animate-qr-scanline { animation: qr-scanline 2.5s ease-in-out infinite alternate; }
         .animate-panic { animation: panic-glow 2s ease-in-out infinite; }
         @keyframes shimmer {
           0% { background-position: -200% center; }
