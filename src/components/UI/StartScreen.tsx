@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
@@ -68,17 +68,16 @@ interface QRScannerModalProps {
 function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
   const [fileError, setFileError] = useState('');
   const [cameraError, setCameraError] = useState('');
-  const [activeScanner, setActiveScanner] = useState<Html5Qrcode | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   useEffect(() => {
-    let html5QrCode: Html5Qrcode | null = null;
     let isMounted = true;
 
-    const initScanner = async () => {
-      // Short delay for DOM and modal transitions to complete
-      await new Promise((resolve) => setTimeout(resolve, 300));
+    const startScanner = async () => {
+      // 1. Give the DOM and transitions 350ms to mount the container safely
+      await new Promise((resolve) => setTimeout(resolve, 350));
       if (!isMounted) return;
 
       const element = document.getElementById("qr-reader");
@@ -88,50 +87,73 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       }
 
       try {
-        html5QrCode = new Html5Qrcode("qr-reader");
-        setActiveScanner(html5QrCode);
-        
-        // Try starting with rear camera (environment mode) first
+        const scanner = new Html5Qrcode("qr-reader");
+        html5QrCodeRef.current = scanner;
+
+        const config = {
+          fps: 20, // High frame rate scan processing
+          qrbox: (width: number, height: number) => {
+            const min = Math.min(width, height);
+            return {
+              width: Math.floor(min * 0.7),
+              height: Math.floor(min * 0.7)
+            };
+          },
+          aspectRatio: 1.0, // Force square layout for optimal scanning alignment
+        };
+
+        const cameraConfig = {
+          facingMode: "environment" // Force rear lens usage
+        };
+
+        await scanner.start(
+          cameraConfig,
+          config,
+          (decodedText) => {
+            if (isMounted) {
+              // Stop camera immediately on successful detection
+              scanner.stop()
+                .then(() => onSuccess(decodedText))
+                .catch((err) => {
+                  console.error("Error stopping scanner after success:", err);
+                  onSuccess(decodedText); // execute callback regardless
+                });
+            }
+          },
+          () => {} // silent search frame logging
+        );
+      } catch (err: any) {
+        console.warn("Direct environment camera launch failed, searching for cameras explicitly...", err);
+        if (!isMounted) return;
+
+        // Fallback: list camera hardware manually for non-standard environments
         try {
-          await html5QrCode.start(
-            { facingMode: "environment" },
-            { 
-              fps: 15, 
-              qrbox: (width, height) => {
-                const min = Math.min(width, height);
-                // Wider scanning box of 85% for an extremely mobile-friendly scan experience
-                const size = Math.floor(min * 0.85); 
-                return { width: size, height: size };
-              }
-            },
-            (decodedText) => {
-              if (isMounted) {
-                onSuccess(decodedText);
-              }
-            },
-            () => {} // silent feedback
-          );
-        } catch (firstErr) {
-          console.warn("Retrying with camera list fallback due to facingMode environment error:", firstErr);
-          if (!isMounted) return;
-          
-          // Fallback: list all cameras and pick any available camera
           const cameras = await Html5Qrcode.getCameras();
           if (cameras && cameras.length > 0) {
             const selectedCameraId = cameras[cameras.length - 1].id;
-            await html5QrCode.start(
-              selectedCameraId,
-              { 
-                fps: 15,
-                qrbox: (width, height) => {
-                  const min = Math.min(width, height);
-                  const size = Math.floor(min * 0.85); 
-                  return { width: size, height: size };
-                }
+            const scanner = html5QrCodeRef.current || new Html5Qrcode("qr-reader");
+            html5QrCodeRef.current = scanner;
+
+            const config = {
+              fps: 20,
+              qrbox: (width: number, height: number) => {
+                const min = Math.min(width, height);
+                return {
+                  width: Math.floor(min * 0.7),
+                  height: Math.floor(min * 0.7)
+                };
               },
+              aspectRatio: 1.0,
+            };
+
+            await scanner.start(
+              selectedCameraId,
+              config,
               (decodedText) => {
                 if (isMounted) {
-                  onSuccess(decodedText);
+                  scanner.stop()
+                    .then(() => onSuccess(decodedText))
+                    .catch(() => onSuccess(decodedText));
                 }
               },
               () => {}
@@ -139,35 +161,36 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           } else {
             throw new Error("No se encontraron cámaras de video en este dispositivo.");
           }
-        }
-      } catch (err: any) {
-        console.error("Camera access error:", err);
-        if (isMounted) {
-          setCameraError(
-            err?.message || "No se pudo encender la cámara automática. Es posible que los permisos de cámara estén bloqueados por el navegador o por la pestaña."
-          );
+        } catch (fallbackErr: any) {
+          console.error("Camera boot fallback unsuccessful:", fallbackErr);
+          if (isMounted) {
+            setCameraError(
+              fallbackErr?.message || "No se pudo encender la cámara automática. Es posible que los permisos estén bloqueados por el navegador o por la pestaña."
+            );
+          }
         }
       }
     };
 
-    initScanner();
+    startScanner();
 
+    // 3. React cleanup lifecycle
     return () => {
       isMounted = false;
-      const stopScanner = async () => {
-        if (html5QrCode) {
+      const stopAndClearAll = async () => {
+        if (html5QrCodeRef.current) {
           try {
-            if (html5QrCode.isScanning) {
-              await html5QrCode.stop();
+            if (html5QrCodeRef.current.isScanning) {
+              await html5QrCodeRef.current.stop();
             }
           } catch (e) {
-            console.error("Error stopping scanner on cleanup:", e);
+            console.error("Error stopping scanner on lifecycle unmount:", e);
           }
         }
       };
-      stopScanner();
+      stopAndClearAll();
     };
-  }, [onSuccess, onClose, onError]);
+  }, [onSuccess]);
 
   // Handle uploading a QR code saved on device
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,7 +199,6 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
 
     setFileError('');
     try {
-      // Use the existing or a temporary Html5Qrcode scanner instance
       const scannerId = "qr-reader-file";
       const fileScanner = new Html5Qrcode(scannerId);
       
