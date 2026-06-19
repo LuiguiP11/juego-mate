@@ -11,6 +11,55 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
+const parseScannedUser = (text: string): string => {
+  let cleaned = text.trim();
+  
+  // 1. Try to parse as JSON (e.g. {"usuario": "juan.perez"})
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === 'object') {
+      const possibleKeys = ['usuario', 'user', 'username', 'code', 'id', 'alumno', 'name', 'nombre'];
+      for (const key of possibleKeys) {
+        if (parsed[key] && typeof parsed[key] === 'string') {
+          return parsed[key].trim().toLowerCase();
+        }
+      }
+    }
+  } catch (e) {
+    // Not JSON
+  }
+
+  // 2. Try to parse as URL (e.g. https://mate-experimental.web.app/alumno/juan.perez)
+  try {
+    if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+      const url = new URL(cleaned);
+      const params = ['user', 'usuario', 'username', 'id', 'alumno', 'name', 'nombre'];
+      for (const p of params) {
+        const val = url.searchParams.get(p);
+        if (val) return val.trim().toLowerCase();
+      }
+      
+      const segments = url.pathname.split('/').filter(Boolean);
+      if (segments.length > 0) {
+        const last = segments[segments.length - 1];
+        if (last && last.length > 2) {
+          return last.trim().toLowerCase();
+        }
+      }
+    }
+  } catch (e) {
+    // Not a valid URL
+  }
+
+  // 3. Fallback to raw string, lowercased, matching firestore format
+  return cleaned
+    .toLowerCase()
+    .normalize("NFD") // split accent marks
+    .replace(/[\u0300-\u036f]/g, "") // remove accent marks
+    .replace(/[^a-z0-9._-]/g, "") // keep lowercase alphanumeric, dots, and hyphens/underscores
+    .trim();
+};
+
 interface QRScannerModalProps {
   onSuccess: (text: string) => void;
   onClose: () => void;
@@ -18,6 +67,9 @@ interface QRScannerModalProps {
 }
 
 function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
+  const [fileError, setFileError] = useState('');
+  const [activeScanner, setActiveScanner] = useState<Html5Qrcode | null>(null);
+
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
     let isMounted = true;
@@ -35,6 +87,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
 
       try {
         html5QrCode = new Html5Qrcode("qr-reader");
+        setActiveScanner(html5QrCode);
         
         // Try starting with rear camera (environment mode) first
         try {
@@ -87,10 +140,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         }
       } catch (err) {
         console.error("Camera access error:", err);
-        if (isMounted) {
-          onError("No se pudo iniciar la cámara. Otorga los permisos e inténtalo de nuevo.");
-          onClose();
-        }
+        // Do not immediately fail! Give the option of using file selector without showing alert blocking
       }
     };
 
@@ -113,23 +163,73 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     };
   }, [onSuccess, onClose, onError]);
 
+  // Handle uploading a QR code saved on device
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setFileError('');
+    try {
+      // Use the existing or a temporary Html5Qrcode scanner instance
+      const scannerId = "qr-reader-file";
+      const fileScanner = new Html5Qrcode(scannerId);
+      
+      const decodedText = await fileScanner.scanFile(file, false);
+      onSuccess(decodedText);
+    } catch (err) {
+      console.error("File scanning error", err);
+      setFileError("No se detectó un código QR válido en la imagen. Sube una foto nítida e inténtalo de nuevo.");
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-6 backdrop-blur-xl"
+      className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-center p-4 backdrop-blur-xl"
     >
-      <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)] animate-panic">
-        <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
-        <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-scanline" />
+      <div className="absolute top-4 inset-x-4 text-center">
+        <span className="text-[9px] text-orange-500 font-extrabold tracking-[0.3em] uppercase block">Lector del Santuario</span>
+        <p className="text-white/60 text-[10px] max-w-sm mx-auto mt-1 leading-tight">
+          Alinea tu código QR frente al lente. Si estás dentro de la ventana de vista previa, te recomendamos abrir la app en una pesta&ntilde;a nueva si tu cámara no responde.
+        </p>
       </div>
-      <button
-        onClick={onClose}
-        className="mt-12 px-10 py-4 bg-red-600/20 border-2 border-red-600 text-red-500 rounded-2xl font-black uppercase tracking-[0.2em] text-xs hover:bg-red-600 hover:text-white transition-all active:scale-95 cursor-pointer"
-      >
-        Cancelar Escaneo
-      </button>
+
+      <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)] animate-panic mt-12">
+        <div id="qr-reader" className="w-full h-full min-h-[280px]" style={{ position: 'relative' }} />
+        <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-scanline pointer-events-none" />
+      </div>
+
+      {/* Hidden element for file scanning */}
+      <div id="qr-reader-file" className="hidden" />
+
+      <div className="mt-6 flex flex-col items-center gap-3 w-full max-w-sm">
+        {/* File upload option */}
+        <label className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-orange-500 hover:bg-orange-950/20 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer w-[80%]">
+          <Camera size={14} className="text-orange-500" />
+          Subir Foto de QR
+          <input 
+            type="file" 
+            accept="image/*" 
+            className="hidden" 
+            onChange={handleFileUpload}
+          />
+        </label>
+
+        {fileError && (
+          <p className="text-red-400 text-[10px] font-semibold text-center max-w-[90%] px-2 py-1 bg-red-950/40 border border-red-900/40 rounded">
+            {fileError}
+          </p>
+        )}
+
+        <button
+          onClick={onClose}
+          className="mt-2 px-8 py-3 bg-red-600/10 border border-red-600/30 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all active:scale-95 cursor-pointer"
+        >
+          Cerrar Lector
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -201,6 +301,54 @@ export default function StartScreen() {
     } catch (err: any) {
       console.error("Firebase Student lookup error:", err);
       setError(`Error al verificar identidad: ${err.message || 'Sin conexión.'}`);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleScanSuccess = async (decodedText: string) => {
+    setScanning(false);
+    const parsedUser = parseScannedUser(decodedText);
+    setName(parsedUser);
+
+    setVerifying(true);
+    setError('');
+
+    try {
+      const q = query(collection(db, 'alumnos'), where('usuario', '==', parsedUser));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const studentDoc = querySnapshot.docs[0];
+        const studentData = studentDoc.data();
+
+        const primerNombre = studentData.primerNombre || '';
+        const primerApellido = studentData.primerApellido || '';
+        const fullName = `${primerNombre} ${primerApellido}`.trim() || 'Héroe Desconocido';
+
+        const grado = studentData.grado || 'Grado Indefinido';
+        const seccion = studentData.seccion ? `Sección ${studentData.seccion}` : '';
+        const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
+
+        // Save validated details to Game Store
+        setPlayerInfo(fullName, parsedUser, gradeInfo);
+
+        const sexo = studentData.sexo || '';
+        if (sexo === 'Femenino') {
+          setGender('female');
+        } else {
+          setGender('male');
+        }
+
+        // Advance to cinematic introduction
+        startLevel(selectedLevel);
+        setPhase('intro');
+      } else {
+        setError(`Código QR detectado con éxito (Usuario: "${parsedUser}"), pero no figura en la base de datos "mate-experimental".`);
+      }
+    } catch (err: any) {
+      console.error("Firebase Student lookup error:", err);
+      setError(`QR escaneado: "${parsedUser}", pero falló la validación: ${err.message || 'Sin conexión.'}`);
     } finally {
       setVerifying(false);
     }
@@ -522,10 +670,7 @@ export default function StartScreen() {
       <AnimatePresence>
         {scanning && (
           <QRScannerModal 
-            onSuccess={(decodedText) => {
-              setName(decodedText);
-              setScanning(false);
-            }}
+            onSuccess={handleScanSuccess}
             onClose={() => setScanning(false)}
             onError={(msg) => setError(msg)}
           />
