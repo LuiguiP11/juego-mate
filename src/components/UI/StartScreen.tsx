@@ -15,13 +15,20 @@ const getStudentUserCandidates = (text: string): string[] => {
   let cleaned = text.trim();
   if (!cleaned) return [];
   
+  // Try to decode URI component in case of encoded search query or route segment
+  try {
+    cleaned = decodeURIComponent(cleaned);
+  } catch (e) {
+    // If it's not valid URI encoded string, proceed with original cleaned
+  }
+
   let parsed = cleaned;
 
   // 1. Try JSON parsing (e.g. {"usuario": "juan.perez"})
   try {
     const ob = JSON.parse(cleaned);
     if (ob && typeof ob === 'object') {
-      const possibleKeys = ['usuario', 'user', 'username', 'code', 'id', 'alumno', 'name', 'nombre'];
+      const possibleKeys = ['usuario', 'Usuario', 'user', 'User', 'username', 'Username', 'code', 'id', 'alumno', 'Alumno', 'name', 'nombre', 'Nombre'];
       for (const key of possibleKeys) {
         if (ob[key] && typeof ob[key] === 'string') {
           parsed = ob[key].trim();
@@ -38,7 +45,7 @@ const getStudentUserCandidates = (text: string): string[] => {
     try {
       if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
         const url = new URL(cleaned);
-        const params = ['user', 'usuario', 'username', 'id', 'alumno', 'name', 'nombre'];
+        const params = ['user', 'User', 'usuario', 'Usuario', 'username', 'Username', 'id', 'ID', 'alumno', 'Alumno', 'name', 'Name', 'nombre', 'Nombre'];
         let found = false;
         for (const p of params) {
           const val = url.searchParams.get(p);
@@ -62,6 +69,13 @@ const getStudentUserCandidates = (text: string): string[] => {
     } catch (e) {
       // Not a valid URL
     }
+  }
+
+  // Apply fallback URI decoding one more time to parsed string to capture any spaces/accents
+  try {
+    parsed = decodeURIComponent(parsed);
+  } catch (e) {
+    // Ignore
   }
 
   // Generate robust structural candidates to ignore case, accent mismatches, or dots vs spaces
@@ -113,34 +127,35 @@ const findStudentByCandidates = async (candidates: string[]) => {
   const primary = filteredCandidates[0];
   const tasks: Promise<any>[] = [];
 
-  // 1. Direct primary document ID lookup
-  tasks.push(
-    getDoc(doc(db, 'alumnos', primary))
-      .then(snap => (snap.exists() ? snap : null))
-      .catch(() => null)
-  );
+  // 1. Direct Document ID searches for all candidate formats
+  filteredCandidates.forEach(cand => {
+    tasks.push(
+      getDoc(doc(db, 'alumnos', cand))
+        .then(snap => (snap.exists() ? snap : null))
+        .catch(() => null)
+    );
+  });
 
-  // 2. Query exact match 'usuario' for primary candidate
+  // 2. Query exact match 'usuario' (both lowercase and uppercase versions check) for candidates
   tasks.push(
     getDocs(query(collection(db, 'alumnos'), where('usuario', '==', primary)))
       .then(snap => (!snap.empty ? snap.docs[0] : null))
       .catch(() => null)
   );
+  tasks.push(
+    getDocs(query(collection(db, 'alumnos'), where('Usuario', '==', primary)))
+      .then(snap => (!snap.empty ? snap.docs[0] : null))
+      .catch(() => null)
+  );
 
-  // 3. Document ID lookups for all other candidate formats (including lowercase, flat, normalized formats)
-  if (filteredCandidates.length > 1) {
-    filteredCandidates.slice(1).forEach(cand => {
-      tasks.push(
-        getDoc(doc(db, 'alumnos', cand))
-          .then(snap => (snap.exists() ? snap : null))
-          .catch(() => null)
-      );
-    });
-  }
-
-  // 4. Query with 'in' operator for up to 10 candidates
+  // 3. Query with 'in' operator check on both lowercase 'usuario' and uppercase 'Usuario' collections
   tasks.push(
     getDocs(query(collection(db, 'alumnos'), where('usuario', 'in', filteredCandidates.slice(0, 10))))
+      .then(snap => (!snap.empty ? snap.docs[0] : null))
+      .catch(() => null)
+  );
+  tasks.push(
+    getDocs(query(collection(db, 'alumnos'), where('Usuario', 'in', filteredCandidates.slice(0, 10))))
       .then(snap => (!snap.empty ? snap.docs[0] : null))
       .catch(() => null)
   );
@@ -483,17 +498,17 @@ export default function StartScreen() {
       if (studentDoc) {
         const studentData = studentDoc.data();
 
-        // Get the actual username registered in the db
-        const dbUsuario = studentData.usuario || primaryUser;
+        // Get the actual username registered in the db (casing robust lookup)
+        const dbUsuario = studentData.usuario || studentData.Usuario || primaryUser;
 
-        // Extremely robust extraction checking all common given name and surname schemas in Spanish and English databases
-        const nombrePart = studentData.nombre || studentData.primerNombre || studentData.nombres || studentData.primer_nombre || '';
-        const apellidoPart = studentData.apellido || studentData.primerApellido || studentData.apellidos || studentData.primer_apellido || '';
+        // Extremely robust extraction checking all common given name and surname schemas (lowercase/capitalized/Spanish/English)
+        const nombrePart = studentData.nombre || studentData.Nombre || studentData.primerNombre || studentData.nombres || studentData.Nombres || studentData.primer_nombre || '';
+        const apellidoPart = studentData.apellido || studentData.Apellido || studentData.primerApellido || studentData.apellidos || studentData.Apellidos || studentData.primer_apellido || '';
         
         let fullName = `${nombrePart} ${apellidoPart}`.trim();
 
         if (!fullName) {
-          fullName = studentData.nombreCompleto || studentData.nombre_completo || studentData.displayName || '';
+          fullName = studentData.nombreCompleto || studentData.nombre_completo || studentData.displayName || studentData.NombreCompleto || '';
         }
 
         // Beautiful capitalized fallback from the username string if no naming fields are stored in document
@@ -508,9 +523,20 @@ export default function StartScreen() {
           }
         }
 
-        const grado = studentData.grado || 'Grado Indefinido';
-        const seccion = studentData.seccion ? `Sección ${studentData.seccion}` : '';
+        const grado = studentData.grado || studentData.Grado || 'Grado Indefinido';
+        const seccion = (studentData.seccion || studentData.Seccion) ? `Sección ${studentData.seccion || studentData.Seccion}` : '';
         const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
+
+        // Auto selection of gender if stored
+        const sexo = studentData.sexo || studentData.Sexo || '';
+        let matchedGender: 'male' | 'female' = 'male';
+        if (sexo === 'Femenino' || sexo === 'femenino' || sexo === 'F' || sexo === 'f') {
+          matchedGender = 'female';
+          setGender('female');
+        } else {
+          matchedGender = 'male';
+          setGender('male');
+        }
 
         // Save validated details to Game Store (this updates store)
         setPlayerInfo(fullName, dbUsuario, gradeInfo);
@@ -520,23 +546,18 @@ export default function StartScreen() {
           fullName,
           userName: dbUsuario,
           gradeInfo,
-          sexo: studentData.sexo || ''
+          sexo
         };
         setValidatedStudent(valObj);
         setName(fullName); // Set input field value to student's FULL name!
 
-        const sexo = studentData.sexo || '';
-        if (sexo === 'Femenino') {
-          setGender('female');
-        } else {
-          setGender('male');
-        }
-
-        // QR Scanned Successfully! Do NOT automatically jump to the next screen!
-        // This lets candidates select Guerrero or Mística and review details before clicking "Iniciar Crónica".
+        // IMMEDIATE TRANSITION! No double click required. Starts playing the game immediately after scanning!
+        console.log("Validación exitosa vía QR, iniciando juego de inmediato para:", fullName);
+        startLevel(selectedLevel);
+        setPhase('intro');
         setError('');
       } else {
-        setError(`Código QR detectado ("${primaryUser}"), pero no figura en la base de datos "mate-experimental".`);
+        setError(`Código QR detectado ("${primaryUser}"), pero no figura en la base de datos "mate-experimental". Verifica su escritura o escanea otro QR.`);
       }
     } catch (err: any) {
       console.error("Firebase Student lookup error:", err);
