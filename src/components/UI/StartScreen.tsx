@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
+import { db } from '../../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface QRScannerModalProps {
   onSuccess: (text: string) => void;
@@ -140,22 +142,68 @@ export default function StartScreen() {
     setPhase, 
     startLevel, 
     gender, 
-    setGender 
+    setGender,
+    playerActividad,
+    playerTrimestre,
+    setPlayerActividad,
+    setPlayerTrimestre
   } = useGameStore();
   
   const [name, setName] = useState(playerName);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(0);
 
-  const handleStart = () => {
-    if (!name.trim()) {
-      setError('Ingresa tu nombre para comenzar');
+  const handleStart = async () => {
+    const userClean = name.trim().toLowerCase();
+    if (!userClean) {
+      setError('Ingresa tu usuario asignado o escanea tu QR');
       return;
     }
-    setPlayerInfo(name, name.toLowerCase(), '7mo Grado'); // Mocked grade for now
-    startLevel(selectedLevel);
-    setPhase('intro'); // Go to intro first
+
+    setVerifying(true);
+    setError('');
+
+    try {
+      // Query "alumnos" partition in base-database filtering by "usuario" field
+      const q = query(collection(db, 'alumnos'), where('usuario', '==', userClean));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const studentDoc = querySnapshot.docs[0];
+        const studentData = studentDoc.data();
+
+        const primerNombre = studentData.primerNombre || '';
+        const primerApellido = studentData.primerApellido || '';
+        const fullName = `${primerNombre} ${primerApellido}`.trim() || 'Héroe Desconocido';
+
+        const grado = studentData.grado || 'Grado Indefinido';
+        const seccion = studentData.seccion ? `Sección ${studentData.seccion}` : '';
+        const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
+
+        // Save validated details to Game Store
+        setPlayerInfo(fullName, userClean, gradeInfo);
+
+        const sexo = studentData.sexo || '';
+        if (sexo === 'Femenino') {
+          setGender('female');
+        } else {
+          setGender('male');
+        }
+
+        // Advance to cinematic introduction
+        startLevel(selectedLevel);
+        setPhase('intro');
+      } else {
+        setError('El usuario de héroe no se encuentra en "mate-experimental". Inténtalo de nuevo.');
+      }
+    } catch (err: any) {
+      console.error("Firebase Student lookup error:", err);
+      setError(`Error al verificar identidad: ${err.message || 'Sin conexión.'}`);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const startQRScanner = () => {
@@ -271,7 +319,7 @@ export default function StartScreen() {
           <div className="space-y-2">
             <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1">
               <User size={8} className="text-orange-500" />
-              Ingresa al Santuario
+              Usuario del Alumno (QR o Texto)
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1 group">
@@ -279,66 +327,122 @@ export default function StartScreen() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tu Nombre de Héroe"
-                  className="w-full bg-white/5 border-2 border-white/10 rounded-lg sm:rounded-xl px-3 py-1.5 sm:px-4 sm:py-2.5 text-white focus:border-orange-500 outline-none transition-all font-serif text-xs sm:text-base placeholder:text-white/20"
+                  placeholder="ej: juan.perez"
+                  disabled={verifying}
+                  className="w-full bg-white/5 border-2 border-white/10 rounded-lg sm:rounded-xl px-3 py-1.5 sm:px-4 sm:py-2.5 text-white focus:border-orange-500 outline-none transition-all font-mono text-xs sm:text-base placeholder:text-white/20"
                 />
                 <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
               </div>
               <button
                 onClick={startQRScanner}
-                className="p-2 sm:p-3 bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg sm:rounded-xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group cursor-pointer"
+                disabled={verifying}
+                className="p-2 sm:p-3 bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg sm:rounded-xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group cursor-pointer disabled:opacity-50"
                 title="Escanear con QR"
               >
                 <QrCode size={18} className="group-hover:rotate-12 transition-transform" />
               </button>
             </div>
-            {error && <p className="text-red-400 text-[9px] font-black animate-shake text-center">{error}</p>}
+            
+            {/* Advanced configurations for Note generation (Trimestre, Actividad) */}
+            <div className="pt-2 border-t border-white/5 space-y-2 bg-black/10 p-2 rounded-lg">
+              <span className="text-[7px] uppercase tracking-[0.2em] text-orange-400 font-extrabold block">Configuración de Nota</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[6px] uppercase tracking-wider text-white/40 block leading-none">Trimestre</label>
+                  <select
+                    value={playerTrimestre}
+                    onChange={(e) => setPlayerTrimestre(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-[9px] sm:text-[10px] outline-none focus:border-orange-500"
+                  >
+                    <option value="T1">1er Trimestre (T1)</option>
+                    <option value="T2">2do Trimestre (T2)</option>
+                    <option value="T3">3er Trimestre (T3)</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[6px] uppercase tracking-wider text-white/40 block leading-none">Actividad</label>
+                  <input
+                    type="text"
+                    value={playerActividad}
+                    onChange={(e) => setPlayerActividad(e.target.value)}
+                    placeholder="Ej: Tarea 3"
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-[9px] sm:text-[10px] outline-none focus:border-orange-500 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex flex-col gap-1 text-center mt-1">
+                <p className="text-red-400 text-[9px] font-black animate-shake leading-tight">{error}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const guestUser = name.trim().toLowerCase() || 'invitado';
+                    const guestFullName = name.trim() ? `${name.trim()} (Invitado)` : 'Explorador Invitado';
+                    setPlayerInfo(guestFullName, guestUser, '7mo Grado - Invitado');
+                    startLevel(selectedLevel);
+                    setPhase('intro');
+                  }}
+                  className="text-[8px] text-gray-500 hover:text-orange-400 underline font-black uppercase tracking-wider transition-colors cursor-pointer mt-0.5"
+                >
+                  ⚙️ Omitir y jugar como Invitado (Modo Pruebas)
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
                <Trophy size={8} className="text-yellow-500" />
-               Selecciona tu Destino
+               Tu Destino místico
             </label>
             <div className="grid grid-cols-2 gap-2 sm:gap-4">
               <button
                 onClick={() => setGender('male')}
-                className={`group relative p-2 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 active:scale-95 overflow-hidden cursor-pointer ${
+                disabled={verifying}
+                className={`group relative p-1.5 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all flex flex-col items-center gap-1 active:scale-95 overflow-hidden cursor-pointer disabled:opacity-50 ${
                   gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
                 }`}
               >
-                <div className={`w-7 h-7 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-105' : 'bg-white/10'}`}>
-                   <Sword size={12} className="sm:size-5" />
+                <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-105' : 'bg-white/10'}`}>
+                   <Sword size={11} className="sm:size-4" />
                 </div>
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em]">Guerrero</span>
+                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">Guerrero</span>
                 {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
               </button>
               <button
                 onClick={() => setGender('female')}
-                className={`group relative p-2 sm:p-4 rounded-xl sm:rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 active:scale-95 overflow-hidden cursor-pointer ${
+                disabled={verifying}
+                className={`group relative p-1.5 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all flex flex-col items-center gap-1 active:scale-95 overflow-hidden cursor-pointer disabled:opacity-50 ${
                   gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
                 }`}
               >
-                <div className={`w-7 h-7 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-105' : 'bg-white/10'}`}>
-                   <Shield size={12} className="sm:size-5" />
+                <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-105' : 'bg-white/10'}`}>
+                   <Shield size={11} className="sm:size-4" />
                 </div>
-                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em]">Mística</span>
+                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">Mística</span>
                 {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
                </button>
             </div>
           </div>
 
-          <div className="pt-1.5 sm:pt-3">
+          <div className="pt-1 sm:pt-2">
             <motion.button
-               whileHover={{ scale: 1.02 }}
-               whileTap={{ scale: 0.98 }}
+               whileHover={{ scale: verifying ? 1 : 1.02 }}
+               whileTap={{ scale: verifying ? 1 : 0.98 }}
                onClick={handleStart}
-               className="w-full py-2.5 sm:py-3.5 bg-white text-black rounded-xl sm:rounded-2xl font-serif text-xs sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_15px_40px_rgba(255,255,255,0.05)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 sm:gap-3 group cursor-pointer"
+               disabled={verifying}
+               className="w-full py-2 sm:py-3 bg-white text-black rounded-lg sm:rounded-xl font-serif text-xs sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_15px_40px_rgba(255,255,255,0.05)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 sm:gap-3 group cursor-pointer disabled:opacity-50 disabled:bg-white/20 disabled:text-white/60"
             >
               <div className="w-5 h-5 sm:w-7 sm:h-7 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
-                <Play size={10} fill="currentColor" className="ml-0.5" />
+                {verifying ? (
+                  <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Play size={10} fill="currentColor" className="ml-0.5" />
+                )}
               </div>
-              INICIAR CRÓNICA
+              {verifying ? 'VERIFICANDO...' : 'INICIAR CRÓNICA'}
             </motion.button>
           </div>
                {/* Level Rail - Refined Anime Style - Compacted */}

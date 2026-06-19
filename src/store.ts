@@ -4,6 +4,8 @@
  */
 
 import { create } from 'zustand';
+import { db } from './firebase';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export type GamePhase = 'start' | 'intro' | 'playing' | 'puzzle' | 'victory' | 'gameover' | 'certificate';
 
@@ -32,6 +34,8 @@ interface GameState {
   playerName: string;
   playerUser: string;
   playerGrade: string;
+  playerActividad: string;
+  playerTrimestre: string;
   gender: 'male' | 'female';
   nearGateIndex: number | null;
   inventory: string[];
@@ -50,6 +54,8 @@ interface GameState {
   setPhase: (phase: GamePhase) => void;
   setGraphicsQuality: (quality: 'high' | 'low') => void;
   setPlayerInfo: (name: string, user: string, grade: string) => void;
+  setPlayerActividad: (actividad: string) => void;
+  setPlayerTrimestre: (trimestre: string) => void;
   setGender: (gender: 'male' | 'female') => void;
   setNearGate: (index: number | null) => void;
   setMobileControl: (control: 'forward' | 'backward' | 'left' | 'right' | 'jump', val: boolean) => void;
@@ -61,6 +67,7 @@ interface GameState {
   useRetry: () => boolean;
   addInventory: (item: string) => void;
   toggleMute: () => void;
+  saveScoreToFirebase: (levelIndex: number, scoreValue: number) => Promise<boolean>;
 }
 
 export const LEVELS: Level[] = [
@@ -131,6 +138,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   playerName: '',
   playerUser: '',
   playerGrade: '',
+  playerActividad: 'Tarea 3',
+  playerTrimestre: 'T2',
   gender: 'male',
   nearGateIndex: null,
   inventory: [],
@@ -158,6 +167,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   setPlayerInfo: (name, user, grade) => set({ playerName: name, playerUser: user, playerGrade: grade }),
   
+  setPlayerActividad: (actividad) => set({ playerActividad: actividad }),
+
+  setPlayerTrimestre: (trimestre) => set({ playerTrimestre: trimestre }),
+  
   setGender: (gender) => set({ gender }),
   
   setNearGate: (index) => set({ nearGateIndex: index }),
@@ -178,6 +191,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         get().addInventory(level.treasure);
         // Add 2 points per level won
         set((state) => ({ totalPoints: state.totalPoints + 2 }));
+        
+        // Trigger automated saving to Firebase
+        get().saveScoreToFirebase(currentLevel, 2.0);
       }
     } else {
       const newLives = get().lives - 1;
@@ -236,5 +252,63 @@ export const useGameStore = create<GameState>((set, get) => ({
       return true;
     }
     return false;
+  },
+
+  saveScoreToFirebase: async (levelIndex, scoreValue) => {
+    const { playerUser, playerActividad, playerTrimestre } = get();
+    if (!playerUser) {
+      console.warn("No player logged in. Skipping Firestore write.");
+      return false;
+    }
+
+    const level = LEVELS[levelIndex];
+    if (!level) return false;
+    const levelName = level.name;
+    
+    // Normalize and clean level name to be lowercase, plain latin characters and no accents or spaces
+    const cleanLevelName = levelName
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '_');
+
+    const cleanActividadName = playerActividad
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, '_');
+
+    // ID structured format:
+    // usuario{trimestre}_actividad.toLowerCase()_nivel{levelName.toLowerCase().replace(/\s+/g, '_')}
+    const trimesterSuffix = playerTrimestre.toLowerCase();
+    const docId = `${playerUser}_${trimesterSuffix}_${cleanActividadName}_nivel_${cleanLevelName}`;
+
+    // Date in DD/MM/YYYY
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const dateStr = `${dd}/${mm}/${yyyy}`;
+
+    try {
+      const docRef = doc(db, 'notas', docId);
+      
+      const docData = {
+        usuario: playerUser,
+        actividad: playerActividad,
+        subActividad: `JHIROS Adventure: ${levelName}`,
+        punteo: scoreValue, // Puntos asignados (2.0)
+        trimestre: playerTrimestre,
+        fecha: dateStr,
+        timestamp: serverTimestamp()
+      };
+
+      console.log("Saving student score to Firestore with ID:", docId, docData);
+      await setDoc(docRef, docData);
+      return true;
+    } catch (err) {
+      console.error("Error saving score to Firestore:", err);
+      return false;
+    }
   }
 }));
