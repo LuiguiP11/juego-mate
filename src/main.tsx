@@ -3,10 +3,13 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-// Silence THREE.Clock deprecation warning until R3F/Drei catch up
+// Silence THREE clock and shadowmap deprecation warnings
 const originalWarn = console.warn;
 console.warn = (...args) => {
-  if (typeof args[0] === 'string' && args[0].includes('THREE.Clock: This module has been deprecated')) return;
+  if (typeof args[0] === 'string') {
+    if (args[0].includes('THREE.Clock: This module has been deprecated')) return;
+    if (args[0].includes('THREE.WebGLShadowMap: PCFSoftShadowMap')) return;
+  }
   originalWarn(...args);
 };
 

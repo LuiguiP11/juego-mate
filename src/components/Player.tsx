@@ -18,7 +18,8 @@ export default function Player() {
   const armL = useRef<THREE.Group>(null);
   const armR = useRef<THREE.Group>(null);
 
-  const [blinking, setBlinking] = useState(false);
+  const eyeLRef = useRef<THREE.Mesh>(null);
+  const eyeRRef = useRef<THREE.Mesh>(null);
   const blinkTimer = useRef(0);
 
   const gender = useGameStore((state) => state.gender);
@@ -244,16 +245,17 @@ export default function Player() {
       if (armR.current) armR.current.rotation.x = THREE.MathUtils.lerp(armR.current.rotation.x, 0, 0.1);
     }
 
-    // Blinking logic
+    // High performance zero-render blinking logic
     blinkTimer.current += delta;
-    if (blinkTimer.current > 3 && !blinking) {
-      setBlinking(true);
-      setTimeout(() => {
-        if (blinkTimer.current !== undefined) {
-          setBlinking(false);
-          blinkTimer.current = 0;
-        }
-      }, 150);
+    if (blinkTimer.current > 3.2) {
+      blinkTimer.current = 0;
+    }
+    const isBlinking = blinkTimer.current > 3.0; // blink duration is 200ms
+    if (eyeLRef.current) {
+      eyeLRef.current.scale.y = isBlinking ? 0.15 : 1;
+    }
+    if (eyeRRef.current) {
+      eyeRRef.current.scale.y = isBlinking ? 0.15 : 1;
     }
   });
 
@@ -304,27 +306,23 @@ export default function Player() {
             <meshPhongMaterial color={COLORS.skin} shininess={10} />
           </mesh>
           
-          {/* Eyes with pupils and expression */}
+          {/* Eyes with pupils and expression - Optimized static refs for zero-render CPU bypass */}
           <group position={[0, 0.05, -0.21]}>
-             <mesh position={[-0.12, 0, 0]} scale={[1, blinking ? 0.1 : 1, 1]}>
+             <mesh ref={eyeLRef} position={[-0.12, 0, 0]}>
                 <sphereGeometry args={[0.08, 16, 16]} />
-                <meshBasicMaterial color={blinking ? COLORS.skin : "white"} />
-                {!blinking && (
-                  <mesh position={[0, 0, -0.06]}>
-                      <sphereGeometry args={[0.04, 12, 12]} />
-                      <meshBasicMaterial color="black" />
-                  </mesh>
-                )}
+                <meshBasicMaterial color="white" />
+                <mesh position={[0, 0, -0.06]}>
+                    <sphereGeometry args={[0.04, 12, 12]} />
+                    <meshBasicMaterial color="black" />
+                </mesh>
              </mesh>
-             <mesh position={[0.12, 0, 0]} scale={[1, blinking ? 0.1 : 1, 1]}>
+             <mesh ref={eyeRRef} position={[0.12, 0, 0]}>
                 <sphereGeometry args={[0.08, 16, 16]} />
-                <meshBasicMaterial color={blinking ? COLORS.skin : "white"} />
-                {!blinking && (
-                  <mesh position={[0, 0, -0.06]}>
-                      <sphereGeometry args={[0.04, 12, 12]} />
-                      <meshBasicMaterial color="black" />
-                  </mesh>
-                )}
+                <meshBasicMaterial color="white" />
+                <mesh position={[0, 0, -0.06]}>
+                    <sphereGeometry args={[0.04, 12, 12]} />
+                    <meshBasicMaterial color="black" />
+                </mesh>
              </mesh>
           </group>
 

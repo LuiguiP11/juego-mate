@@ -47,7 +47,7 @@ function Torch({ position }: { position: [number, number, number] }) {
 
 function Gate({ index, z, solved, theme, active }: { index: number, z: number, solved: boolean, theme: string, active: boolean }) {
   const doorRef = useRef<any>(null);
-  const [opacity, setOpacity] = useState(1);
+  const textRef = useRef<any>(null);
   const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   
   // High-contrast theme colors
@@ -63,29 +63,25 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
 
   useFrame((state) => {
     if (solved) {
-      if (doorRef.current && doorRef.current.position.y < 6) {
-        doorRef.current.position.y += 0.05;
+      if (doorRef.current && doorRef.current.position.y < 5.5) {
+        doorRef.current.position.y += 0.055;
       }
-      if (opacity > 0) {
-        setOpacity(prev => Math.max(0, prev - 0.02));
+      if (textRef.current && textRef.current.fillOpacity > 0) {
+        textRef.current.fillOpacity = Math.max(0, textRef.current.fillOpacity - 0.035);
       }
-    } else {
-        if (opacity < 1) setOpacity(1);
     }
   });
 
-  if (solved && opacity <= 0) return null;
-
   return (
     <group position={[0, 0, z]}>
-      {/* Wall blockage on sides - Now with opacity support */}
+      {/* Wall blockage on sides */}
       <mesh position={[-3, 3.5, 0]} receiveShadow>
         <boxGeometry args={[2, 7, 0.4]} />
-        <meshStandardMaterial color="#222222" transparent opacity={opacity} />
+        <meshStandardMaterial color="#222222" />
       </mesh>
       <mesh position={[3, 3.5, 0]} receiveShadow>
         <boxGeometry args={[2, 7, 0.4]} />
-        <meshStandardMaterial color="#222222" transparent opacity={opacity} />
+        <meshStandardMaterial color="#222222" />
       </mesh>
 
       {/* Tribal Interaction Circle - Ancient Mystic Design with High Contrast */}
@@ -161,7 +157,7 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
                  <meshBasicMaterial color={colors.primary} transparent opacity={0.2} />
              </mesh>
          </group>
-      )}
+       )}
 
       {/* Main Arch Frame */}
       <group position={[0, 0, 0]}>
@@ -169,8 +165,6 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
             <boxGeometry args={[0.4, 3.5, 0.4]} />
             <meshStandardMaterial 
               color="#333333" 
-              transparent 
-              opacity={opacity} 
               emissive={solved ? "#00ff00" : "#ff4400"}
               emissiveIntensity={0.1}
             />
@@ -179,8 +173,6 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
             <boxGeometry args={[0.4, 3.5, 0.4]} />
             <meshStandardMaterial 
               color="#333333" 
-              transparent 
-              opacity={opacity} 
               emissive={solved ? "#00ff00" : "#ff4400"}
               emissiveIntensity={0.1}
             />
@@ -189,8 +181,6 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
             <boxGeometry args={[2.8, 0.4, 0.4]} />
             <meshStandardMaterial 
               color="#333333" 
-              transparent 
-              opacity={opacity} 
               emissive={solved ? "#00ff00" : "#ff4400"}
               emissiveIntensity={0.1}
             />
@@ -207,15 +197,16 @@ function Gate({ index, z, solved, theme, active }: { index: number, z: number, s
            emissive={solved ? "#00ff00" : "#ff4400"}
            emissiveIntensity={0.2}
            transparent
-           opacity={solved ? opacity : 0.15}
+           opacity={solved ? 0.05 : 0.15}
         />
         <Text
+          ref={textRef}
           position={[0, 0, 0.06]}
           fontSize={0.4}
           color={solved ? "#39ff14" : "#ffffff"}
           anchorX="center"
           anchorY="middle"
-          fillOpacity={opacity}
+          fillOpacity={1}
         >
           {['∑', 'π', 'Ω', '∆', '√'][index % 5]}
         </Text>

@@ -101,66 +101,59 @@ const getStudentUserCandidates = (text: string): string[] => {
 };
 
 /**
- * Searches the 'alumnos' collection using candidate usernames or Document IDs with a highly optimized sequential flow.
- * Checks direct document IDs first (fastest, 50ms), then checks field queries.
+ * Searches the 'alumnos' collection using candidate usernames or Document IDs in parallel.
+ * Checks direct document IDs and queries concurrently (1 roundtrip instead of sequential).
  */
 const findStudentByCandidates = async (candidates: string[]) => {
-  const filteredCandidates = Array.from(new Set(candidates)).filter(Boolean).slice(0, 5);
+  const filteredCandidates = Array.from(new Set(candidates)).filter(Boolean).slice(0, 10);
   if (filteredCandidates.length === 0) return null;
 
-  console.log("Iniciando búsqueda de alumno optimizada, candidatos:", filteredCandidates);
+  console.log("Iniciando búsqueda de alumno ultra-optimizada en paralelo, candidatos:", filteredCandidates);
 
-  // Strategy 1: Check the primary matched candidate directly by Document ID. (Extremely fast, usually 1 roundtrip)
   const primary = filteredCandidates[0];
-  try {
-    const docRef = doc(db, 'alumnos', primary);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      console.log("Alumno encontrado por Document ID directo (primario):", primary);
-      return docSnap;
-    }
-  } catch (err) {
-    console.debug("Direct primary ID lookup ignored:", err);
-  }
+  const tasks: Promise<any>[] = [];
 
-  // Strategy 2: Query by 'usuario' field using exact match for primary candidate
-  try {
-    const qExact = query(collection(db, 'alumnos'), where('usuario', '==', primary));
-    const qsExact = await getDocs(qExact);
-    if (!qsExact.empty) {
-      console.log("Alumno encontrado por query exacta 'usuario' == :", primary);
-      return qsExact.docs[0];
-    }
-  } catch (err) {
-    console.debug("Query 'usuario' exact match ignored:", err);
-  }
+  // 1. Direct primary document ID lookup
+  tasks.push(
+    getDoc(doc(db, 'alumnos', primary))
+      .then(snap => (snap.exists() ? snap : null))
+      .catch(() => null)
+  );
 
-  // Strategy 3: Check remaining candidate formats directly by Document ID
+  // 2. Query exact match 'usuario' for primary candidate
+  tasks.push(
+    getDocs(query(collection(db, 'alumnos'), where('usuario', '==', primary)))
+      .then(snap => (!snap.empty ? snap.docs[0] : null))
+      .catch(() => null)
+  );
+
+  // 3. Document ID lookups for all other candidate formats (including lowercase, flat, normalized formats)
   if (filteredCandidates.length > 1) {
-    try {
-      const remainingCandidates = filteredCandidates.slice(1);
-      const docRefs = remainingCandidates.map(cand => doc(db, 'alumnos', cand));
-      const snaps = await Promise.all(docRefs.map(ref => getDoc(ref).catch(() => null)));
-      const foundSnap = snaps.find(snap => snap && snap.exists());
-      if (foundSnap) {
-        console.log("Alumno encontrado por Document ID secundario:", foundSnap.id);
-        return foundSnap;
-      }
-    } catch (err) {
-      console.debug("Batch document read ignored:", err);
-    }
+    filteredCandidates.slice(1).forEach(cand => {
+      tasks.push(
+        getDoc(doc(db, 'alumnos', cand))
+          .then(snap => (snap.exists() ? snap : null))
+          .catch(() => null)
+      );
+    });
   }
 
-  // Strategy 4: Fallback to the 'in' query for any mismatched candidate formats
+  // 4. Query with 'in' operator for up to 10 candidates
+  tasks.push(
+    getDocs(query(collection(db, 'alumnos'), where('usuario', 'in', filteredCandidates.slice(0, 10))))
+      .then(snap => (!snap.empty ? snap.docs[0] : null))
+      .catch(() => null)
+  );
+
   try {
-    const q = query(collection(db, 'alumnos'), where('usuario', 'in', filteredCandidates));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      console.log("Alumno encontrado por query 'usuario' IN candidatos.");
-      return querySnapshot.docs[0];
+    const results = await Promise.all(tasks);
+    const found = results.find(snap => snap !== null);
+    if (found) {
+      console.log("Alumno localizado con éxito en paralelo.");
+      return found;
     }
   } catch (err) {
-    console.warn("Filtro IN de Firestore falló para 'alumnos':", err);
+    console.warn("Error en búsqueda paralela de alumno:", err);
   }
 
   return null;
@@ -378,7 +371,7 @@ export default function StartScreen() {
     // If we have already validated a student, we immediately start!
     // This blocks unnecessary repeated database reads and guarantees instant login.
     if (validatedStudent) {
-      console.log("Iniciando aventura con estudiante validado:", validatedStudent);
+      console.log("Iniciando aventura con estudiante ya verificado:", validatedStudent);
       setPlayerInfo(validatedStudent.fullName, validatedStudent.userName, validatedStudent.gradeInfo);
       startLevel(selectedLevel);
       setPhase('intro');
@@ -401,16 +394,16 @@ export default function StartScreen() {
         const studentData = studentDoc.data();
 
         // Get the actual username registered in the db
-        const dbUsuario = studentData.usuario || candidates[0];
+        const dbUsuario = studentData.usuario || studentData.Usuario || candidates[0];
 
-        // Extremely robust extraction checking all common given name and surname schemas in Spanish and English databases
-        const nombrePart = studentData.nombre || studentData.primerNombre || studentData.nombres || studentData.primer_nombre || '';
-        const apellidoPart = studentData.apellido || studentData.primerApellido || studentData.apellidos || studentData.primer_apellido || '';
+        // Extremely robust extraction checking all common given name and surname schemas (lowercase/capitalized/Spanish/English)
+        const nombrePart = studentData.nombre || studentData.Nombre || studentData.primerNombre || studentData.nombres || studentData.Nombres || studentData.primer_nombre || '';
+        const apellidoPart = studentData.apellido || studentData.Apellido || studentData.primerApellido || studentData.apellidos || studentData.Apellidos || studentData.primer_apellido || '';
         
         let fullName = `${nombrePart} ${apellidoPart}`.trim();
 
         if (!fullName) {
-          fullName = studentData.nombreCompleto || studentData.nombre_completo || studentData.displayName || '';
+          fullName = studentData.nombreCompleto || studentData.nombre_completo || studentData.displayName || studentData.NombreCompleto || '';
         }
 
         // Beautiful capitalized fallback from the username string if no naming fields are stored in document
@@ -425,33 +418,39 @@ export default function StartScreen() {
           }
         }
 
-        const grado = studentData.grado || 'Grado Indefinido';
-        const seccion = studentData.seccion ? `Sección ${studentData.seccion}` : '';
+        const grado = studentData.grado || studentData.Grado || 'Grado Indefinido';
+        const seccion = (studentData.seccion || studentData.Seccion) ? `Sección ${studentData.seccion || studentData.Seccion}` : '';
         const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
+
+        // Auto selection of gender if stored
+        const sexo = studentData.sexo || studentData.Sexo || '';
+        let matchedGender: 'male' | 'female' = 'male';
+        if (sexo === 'Femenino' || sexo === 'femenino' || sexo === 'F' || sexo === 'f') {
+          matchedGender = 'female';
+          setGender('female');
+        } else {
+          matchedGender = 'male';
+          setGender('male');
+        }
 
         // Save validated details to Game Store
         setPlayerInfo(fullName, dbUsuario, gradeInfo);
 
-        // Store validation locally so they can select Guerrero/Mística freely
-        const valObj = {
+        // Store validation locally
+        setValidatedStudent({
           fullName,
           userName: dbUsuario,
           gradeInfo,
-          sexo: studentData.sexo || ''
-        };
-        setValidatedStudent(valObj);
-        setName(fullName); // Replace username string input with the student's gorgeous full name!
+          sexo
+        });
+        setName(fullName); // Replace input text with full actual student name!
 
-        const sexo = studentData.sexo || '';
-        if (sexo === 'Femenino') {
-          setGender('female');
-        } else {
-          setGender('male');
-        }
-
-        setError(''); // clear errors
+        // IMMEDIATE TRANSITION! No double click required. Starts playing the game!
+        console.log("Validación exitosa, iniciando juego de inmediato para:", fullName);
+        startLevel(selectedLevel);
+        setPhase('intro');
       } else {
-        setError('El usuario de héroe no se encuentra en "mate-experimental". Inténtalo de nuevo o juega como Invitado.');
+        setError('El usuario de héroe no figura en la base de datos de la plataforma "mate-experimental". Verifica que esté bien escrito o escanea tu QR.');
       }
     } catch (err: any) {
       console.error("Firebase Student lookup error:", err);
@@ -703,19 +702,6 @@ export default function StartScreen() {
             {error && (
               <div className="flex flex-col gap-1 text-center mt-1">
                 <p className="text-red-400 text-[9px] font-black animate-shake leading-tight">{error}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const guestUser = name.trim().toLowerCase() || 'invitado';
-                    const guestFullName = name.trim() ? `${name.trim()} (Invitado)` : 'Explorador Invitado';
-                    setPlayerInfo(guestFullName, guestUser, '7mo Grado - Invitado');
-                    startLevel(selectedLevel);
-                    setPhase('intro');
-                  }}
-                  className="text-[8px] text-gray-500 hover:text-orange-400 underline font-black uppercase tracking-wider transition-colors cursor-pointer mt-0.5"
-                >
-                  ⚙️ Omitir y jugar como Invitado (Modo Pruebas)
-                </button>
               </div>
             )}
           </div>
@@ -772,27 +758,6 @@ export default function StartScreen() {
               </div>
               {verifying ? 'VERIFICANDO...' : 'INICIAR CRÓNICA'}
             </motion.button>
-
-            {/* Always visible action button to skip verification and enter as guest */}
-            <button
-              type="button"
-              onClick={() => {
-                const guestUser = name.trim().toLowerCase() || 'invitado';
-                let guestFullName = 'Invitado';
-                if (name.trim()) {
-                  guestFullName = name.trim();
-                } else {
-                  guestFullName = 'Explorador Invitado';
-                }
-                setPlayerInfo(guestFullName, guestUser, '7mo Grado - Invitado');
-                startLevel(selectedLevel);
-                setPhase('intro');
-              }}
-              disabled={verifying}
-              className="w-full py-2 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white/70 hover:text-white rounded-lg sm:rounded-xl font-sans text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.1em] transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>🎮 JUGAR COMO INVITADO (SIN VALIDAR)</span>
-            </button>
           </div>
                {/* Level Rail - Refined Anime Style - Compacted */}
         <div className="w-full max-w-5xl mt-5 sm:mt-12 relative px-4 sm:px-8">

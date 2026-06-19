@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build && npx tsx -e \"import fs from 'fs'; fs.rmSync('build', { recursive: true, force: true }); fs.cpSync('dist', 'build', { recursive: true });\"",
+    "build": "vite build",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
