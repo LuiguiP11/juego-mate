@@ -255,11 +255,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   saveScoreToFirebase: async (levelIndex, scoreValue) => {
-    const { playerUser, playerActividad, playerTrimestre } = get();
+    const { playerUser } = get();
     if (!playerUser) {
       console.warn("No player logged in. Skipping Firestore write.");
       return false;
     }
+
+    const forcedActividad = 'Tarea 3';
+    const forcedTrimestre = 'T2';
 
     const level = LEVELS[levelIndex];
     if (!level) return false;
@@ -272,7 +275,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, '_');
 
-    const cleanActividadName = playerActividad
+    const cleanActividadName = forcedActividad
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -280,7 +283,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     // ID structured format:
     // usuario{trimestre}_actividad.toLowerCase()_nivel{levelName.toLowerCase().replace(/\s+/g, '_')}
-    const trimesterSuffix = playerTrimestre.toLowerCase();
+    const trimesterSuffix = forcedTrimestre.toLowerCase();
     const docId = `${playerUser}_${trimesterSuffix}_${cleanActividadName}_nivel_${cleanLevelName}`;
 
     // Date in DD/MM/YYYY
@@ -295,10 +298,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       
       const docData = {
         usuario: playerUser,
-        actividad: playerActividad,
+        actividad: forcedActividad,
         subActividad: `JHIROS Adventure: ${levelName}`,
         punteo: scoreValue, // Puntos asignados (2.0)
-        trimestre: playerTrimestre,
+        trimestre: forcedTrimestre,
         fecha: dateStr,
         timestamp: serverTimestamp()
       };

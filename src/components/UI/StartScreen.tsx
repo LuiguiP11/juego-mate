@@ -9,19 +9,23 @@ import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Tr
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
-const parseScannedUser = (text: string): string => {
+const getStudentUserCandidates = (text: string): string[] => {
   let cleaned = text.trim();
+  if (!cleaned) return [];
   
-  // 1. Try to parse as JSON (e.g. {"usuario": "juan.perez"})
+  let parsed = cleaned;
+
+  // 1. Try JSON parsing (e.g. {"usuario": "juan.perez"})
   try {
-    const parsed = JSON.parse(cleaned);
-    if (parsed && typeof parsed === 'object') {
+    const ob = JSON.parse(cleaned);
+    if (ob && typeof ob === 'object') {
       const possibleKeys = ['usuario', 'user', 'username', 'code', 'id', 'alumno', 'name', 'nombre'];
       for (const key of possibleKeys) {
-        if (parsed[key] && typeof parsed[key] === 'string') {
-          return parsed[key].trim().toLowerCase();
+        if (ob[key] && typeof ob[key] === 'string') {
+          parsed = ob[key].trim();
+          break;
         }
       }
     }
@@ -29,34 +33,124 @@ const parseScannedUser = (text: string): string => {
     // Not JSON
   }
 
-  // 2. Try to parse as URL (e.g. https://mate-experimental.web.app/alumno/juan.perez)
-  try {
-    if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
-      const url = new URL(cleaned);
-      const params = ['user', 'usuario', 'username', 'id', 'alumno', 'name', 'nombre'];
-      for (const p of params) {
-        const val = url.searchParams.get(p);
-        if (val) return val.trim().toLowerCase();
-      }
-      
-      const segments = url.pathname.split('/').filter(Boolean);
-      if (segments.length > 0) {
-        const last = segments[segments.length - 1];
-        if (last && last.length > 2) {
-          return last.trim().toLowerCase();
+  // 2. Try URL parsing (e.g. https://mate-experimental.web.app/alumno/juan.perez)
+  if (parsed === cleaned) {
+    try {
+      if (cleaned.startsWith('http://') || cleaned.startsWith('https://')) {
+        const url = new URL(cleaned);
+        const params = ['user', 'usuario', 'username', 'id', 'alumno', 'name', 'nombre'];
+        let found = false;
+        for (const p of params) {
+          const val = url.searchParams.get(p);
+          if (val) {
+            parsed = val.trim();
+            found = true;
+            break;
+          }
+        }
+        
+        if (!found) {
+          const segments = url.pathname.split('/').filter(Boolean);
+          if (segments.length > 0) {
+            const last = segments[segments.length - 1];
+            if (last && last.length > 2) {
+              parsed = last.trim();
+            }
+          }
         }
       }
+    } catch (e) {
+      // Not a valid URL
     }
-  } catch (e) {
-    // Not a valid URL
   }
 
-  // 3. Normalized string: lowercase, strip accents, but KEEP spaces/dots/hyphens/underscores to avoid breaking student IDs
-  return cleaned
-    .toLowerCase()
-    .normalize("NFD") // split accent marks
-    .replace(/[\u0300-\u036f]/g, "") // remove accent marks
-    .trim();
+  // Generate robust structural candidates to ignore case, accent mismatches, or dots vs spaces
+  const candidatesSet = new Set<string>();
+  
+  // Basic structures
+  candidatesSet.add(parsed);
+  candidatesSet.add(parsed.toLowerCase());
+  
+  const parsedNoAccents = parsed.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  candidatesSet.add(parsedNoAccents);
+  candidatesSet.add(parsedNoAccents.toLowerCase());
+
+  // Dot / Space conversions
+  const withDots = parsed.replace(/\s+/g, '.');
+  candidatesSet.add(withDots);
+  candidatesSet.add(withDots.toLowerCase());
+  const withDotsNoAccents = parsedNoAccents.replace(/\s+/g, '.');
+  candidatesSet.add(withDotsNoAccents);
+  candidatesSet.add(withDotsNoAccents.toLowerCase());
+
+  const withSpaces = parsed.replace(/\./g, ' ');
+  candidatesSet.add(withSpaces);
+  candidatesSet.add(withSpaces.toLowerCase());
+  const withSpacesNoAccents = parsedNoAccents.replace(/\./g, ' ');
+  candidatesSet.add(withSpacesNoAccents);
+  candidatesSet.add(withSpacesNoAccents.toLowerCase());
+
+  // Also try fully flattened numeric/letter string as a final option
+  const flat = parsed.replace(/[^a-zA-Z0-9]/g, '');
+  if (flat) {
+    candidatesSet.add(flat);
+    candidatesSet.add(flat.toLowerCase());
+  }
+
+  return Array.from(candidatesSet).filter(Boolean).slice(0, 30);
+};
+
+/**
+ * Searches the 'alumnos' collection using candidate usernames or Document IDs.
+ */
+const findStudentByCandidates = async (candidates: string[]) => {
+  // Limit candidates to 10 unique elements to conform to Firestore's standard limits and keep performance high
+  const filteredCandidates = Array.from(new Set(candidates)).filter(Boolean).slice(0, 10);
+  if (filteredCandidates.length === 0) return null;
+
+  console.log("Iniciando búsqueda de alumno con candidatos:", filteredCandidates);
+
+  // 1. Check all candidate strings sequentially as exact Doc IDs (highly reliable for imported lists)
+  for (const cand of filteredCandidates) {
+    try {
+      const docRef = doc(db, 'alumnos', cand);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        console.log("Alumno encontrado por Document ID directo:", cand);
+        return docSnap;
+      }
+    } catch (err) {
+      console.warn(`Intento de ID de documento '${cand}' falló o fue omitido`, err);
+    }
+  }
+
+  // 2. Query Firestore by the 'usuario' field using 'in' operator
+  try {
+    const q = query(collection(db, 'alumnos'), where('usuario', 'in', filteredCandidates));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      console.log("Alumno encontrado por coincidencia 'usuario' IN.");
+      return querySnapshot.docs[0];
+    }
+  } catch (err) {
+    console.warn("Filtro IN de Firestore falló para 'alumnos'. Ejecutando consultas individuales...", err);
+  }
+
+  // 3. Fallback to individual exact queries if the 'in' operator has indexing constraints
+  for (const cand of filteredCandidates) {
+    try {
+      const qExact = query(collection(db, 'alumnos'), where('usuario', '==', cand));
+      const qsExact = await getDocs(qExact);
+      if (!qsExact.empty) {
+        console.log("Alumno encontrado por exactitud de 'usuario':", cand);
+        return qsExact.docs[0];
+      }
+    } catch (err) {
+      console.warn(`Query exacta 'usuario' == '${cand}' falló`, err);
+    }
+  }
+
+  return null;
 };
 
 interface QRScannerModalProps {
@@ -66,7 +160,6 @@ interface QRScannerModalProps {
 }
 
 function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
-  const [fileError, setFileError] = useState('');
   const [cameraError, setCameraError] = useState('');
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
@@ -164,9 +257,9 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         } catch (fallbackErr: any) {
           console.error("Camera boot fallback unsuccessful:", fallbackErr);
           if (isMounted) {
-            setCameraError(
-              fallbackErr?.message || "No se pudo encender la cámara automática. Es posible que los permisos estén bloqueados por el navegador o por la pestaña."
-            );
+            const fallbackMessage = "No se pudo encender la cámara automática. Es posible que los permisos de la pestaña o del navegador estén bloqueados.";
+            setCameraError(fallbackMessage);
+            onError(fallbackMessage);
           }
         }
       }
@@ -190,25 +283,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       };
       stopAndClearAll();
     };
-  }, [onSuccess]);
-
-  // Handle uploading a QR code saved on device
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setFileError('');
-    try {
-      const scannerId = "qr-reader-file";
-      const fileScanner = new Html5Qrcode(scannerId);
-      
-      const decodedText = await fileScanner.scanFile(file, false);
-      onSuccess(decodedText);
-    } catch (err) {
-      console.error("File scanning error", err);
-      setFileError("No se detectó un código QR válido en la imagen. Intenta con una captura nítida.");
-    }
-  };
+  }, [onSuccess, onError]);
 
   return (
     <motion.div 
@@ -226,7 +301,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
               ⚠️ Estás jugando dentro de la vista previa (iframe) de Google AI Studio.
             </p>
             <p className="text-white/60 text-[9px] mt-1 leading-relaxed">
-              Los navegadores bloquean la cámara dentro de vistas previas. Por favor, haz clic en el botón de <span className="text-orange-300 font-bold uppercase">&quot;Abrir en pestaña nueva&quot;</span> en la esquina superior derecha del navegador para jugar con tu cámara habilitada, o bien:
+              Los navegadores bloquean la cámara dentro de vistas previas. Por favor, haz clic en el botón de <span className="text-orange-300 font-bold uppercase">&quot;Abrir en pestaña nueva&quot;</span> en la esquina superior derecha del navegador para jugar con tu cámara habilitada.
             </p>
           </div>
         )}
@@ -239,11 +314,11 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
             <p className="text-white/70 text-[10px] sm:text-xs font-semibold leading-relaxed">
               No se pudo activar la cámara de forma directa.
             </p>
-            <p className="text-neutral-500 text-[9px] mt-1 leading-relaxed max-w-[90%]">
+            <p className="text-neutral-500 text-[9px] mt-1 leading-relaxed max-w-[95%]">
               {cameraError}
             </p>
-            <span className="text-orange-400 text-[9px] font-bold mt-3 block">
-              ¡Puedes subir una imagen/foto del código QR en su lugar!
+            <span className="text-orange-400 text-[9px] font-bold mt-4 block">
+              Asegúrate de otorgar permisos de cámara en tu navegador e ingresa en una pestaña dedicada.
             </span>
           </div>
         ) : (
@@ -254,31 +329,10 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         )}
       </div>
 
-      {/* Hidden element for file scanning */}
-      <div id="qr-reader-file" className="hidden" />
-
-      <div className="mt-4 flex flex-col items-center gap-2.5 w-full max-w-sm">
-        {/* File upload option as primary fallback */}
-        <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 hover:border-orange-500 hover:bg-orange-950/20 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer w-[80%]">
-          <Camera size={14} className="text-orange-500" />
-          Subir Foto de QR
-          <input 
-            type="file" 
-            accept="image/*" 
-            className="hidden" 
-            onChange={handleFileUpload}
-          />
-        </label>
-
-        {fileError && (
-          <p className="text-red-400 text-[9px] font-medium text-center max-w-[90%] px-2 py-1 bg-red-950/40 border border-red-900/10 rounded">
-            {fileError}
-          </p>
-        )}
-
+      <div className="mt-6 flex flex-col items-center gap-2.5 w-full max-w-sm">
         <button
           onClick={onClose}
-          className="mt-1 px-6 py-2.5 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[9px] transition-all active:scale-95 cursor-pointer"
+          className="px-8 py-3 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all active:scale-95 cursor-pointer"
         >
           Cerrar Lector
         </button>
@@ -309,8 +363,8 @@ export default function StartScreen() {
   const [selectedLevel, setSelectedLevel] = useState(0);
 
   const handleStart = async () => {
-    const userClean = name.trim().toLowerCase();
-    if (!userClean) {
+    const candidates = getStudentUserCandidates(name);
+    if (candidates.length === 0) {
       setError('Ingresa tu usuario asignado o escanea tu QR');
       return;
     }
@@ -319,13 +373,13 @@ export default function StartScreen() {
     setError('');
 
     try {
-      // Query "alumnos" partition in base-database filtering by "usuario" field
-      const q = query(collection(db, 'alumnos'), where('usuario', '==', userClean));
-      const querySnapshot = await getDocs(q);
+      const studentDoc = await findStudentByCandidates(candidates);
 
-      if (!querySnapshot.empty) {
-        const studentDoc = querySnapshot.docs[0];
+      if (studentDoc) {
         const studentData = studentDoc.data();
+
+        // Get the actual username registered in the db
+        const dbUsuario = studentData.usuario || candidates[0];
 
         const primerNombre = studentData.primerNombre || '';
         const primerApellido = studentData.primerApellido || '';
@@ -336,7 +390,7 @@ export default function StartScreen() {
         const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
 
         // Save validated details to Game Store
-        setPlayerInfo(fullName, userClean, gradeInfo);
+        setPlayerInfo(fullName, dbUsuario, gradeInfo);
 
         const sexo = studentData.sexo || '';
         if (sexo === 'Femenino') {
@@ -361,19 +415,29 @@ export default function StartScreen() {
 
   const handleScanSuccess = async (decodedText: string) => {
     setScanning(false);
-    const parsedUser = parseScannedUser(decodedText);
-    setName(parsedUser);
+    const candidates = getStudentUserCandidates(decodedText);
+    
+    // Choose the cleanest lowercase user identifier as the default text to show in input field
+    const primaryUser = candidates.find(c => c === c.toLowerCase()) || candidates[0] || decodedText.trim();
+    setName(primaryUser);
 
     setVerifying(true);
     setError('');
 
     try {
-      const q = query(collection(db, 'alumnos'), where('usuario', '==', parsedUser));
-      const querySnapshot = await getDocs(q);
+      if (candidates.length === 0) {
+        setError('No se pudo extraer un usuario a partir del código QR.');
+        setVerifying(false);
+        return;
+      }
 
-      if (!querySnapshot.empty) {
-        const studentDoc = querySnapshot.docs[0];
+      const studentDoc = await findStudentByCandidates(candidates);
+
+      if (studentDoc) {
         const studentData = studentDoc.data();
+
+        // Get the actual username registered in the db
+        const dbUsuario = studentData.usuario || primaryUser;
 
         const primerNombre = studentData.primerNombre || '';
         const primerApellido = studentData.primerApellido || '';
@@ -384,7 +448,7 @@ export default function StartScreen() {
         const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
 
         // Save validated details to Game Store
-        setPlayerInfo(fullName, parsedUser, gradeInfo);
+        setPlayerInfo(fullName, dbUsuario, gradeInfo);
 
         const sexo = studentData.sexo || '';
         if (sexo === 'Femenino') {
@@ -397,11 +461,11 @@ export default function StartScreen() {
         startLevel(selectedLevel);
         setPhase('intro');
       } else {
-        setError(`Código QR detectado con éxito (Usuario: "${parsedUser}"), pero no figura en la base de datos "mate-experimental".`);
+        setError(`Código QR detectado ("${primaryUser}"), pero no figura en la base de datos "mate-experimental".`);
       }
     } catch (err: any) {
       console.error("Firebase Student lookup error:", err);
-      setError(`QR escaneado: "${parsedUser}", pero falló la validación: ${err.message || 'Sin conexión.'}`);
+      setError(`QR escaneado: "${primaryUser}", pero falló la validación: ${err.message || 'Sin conexión.'}`);
     } finally {
       setVerifying(false);
     }
