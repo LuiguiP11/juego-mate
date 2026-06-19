@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+/* HTML5 QR Code Styling overrides to make the reader look incredible */
+#qr-reader {
+  border: none !important;
+  background: transparent !important;
+}
+
+#qr-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 20px !important;
+}
+
+#qr-reader__scan_region {
+  background: transparent !important;
+  border: none !important;
+}
+
+#qr-reader__scan_region svg {
+  display: none !important; /* Hide html5-qrcode's default helper SVG frames */
+}
+
+/* Override the built-in border lines that html5-qrcode draws on the canvas if any */
+#qr-reader__scan_region canvas {
+  display: none !important;
+}
+
+/* Create elegant corner brackets on the scanner over the camera stream */
+.qr-scanner-overlay {
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(249, 115, 22, 0.15);
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.qr-scanner-overlay::before,
+.qr-scanner-overlay::after,
+.qr-scanner-overlay-inner::before,
+.qr-scanner-overlay-inner::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: rgb(249, 115, 22); /* Tailwind orange-500 */
+  border-style: solid;
+  pointer-events: none;
+}
+
+/* Top-Left Corner */
+.qr-scanner-overlay::before {
+  top: -2px;
+  left: -2px;
+  border-width: 4px 0 0 4px;
+  border-top-left-radius: 12px;
+}
+
+/* Top-Right Corner */
+.qr-scanner-overlay::after {
+  top: -2px;
+  right: -2px;
+  border-width: 4px 4px 0 0;
+  border-top-right-radius: 12px;
+}
+
+/* Bottom-Left Corner */
+.qr-scanner-overlay-inner::before {
+  bottom: -2px;
+  left: -2px;
+  border-width: 0 0 4px 4px;
+  border-bottom-left-radius: 12px;
+}
+
+/* Bottom-Right Corner */
+.qr-scanner-overlay-inner::after {
+  bottom: -2px;
+  right: -2px;
+  border-width: 0 4px 4px 0;
+  border-bottom-right-radius: 12px;
+}
+

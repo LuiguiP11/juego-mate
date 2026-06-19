@@ -101,56 +101,82 @@ const getStudentUserCandidates = (text: string): string[] => {
 };
 
 /**
- * Searches the 'alumnos' collection using candidate usernames or Document IDs.
+ * Searches the 'alumnos' collection using candidate usernames or Document IDs in parallel for instant scan speed.
  */
 const findStudentByCandidates = async (candidates: string[]) => {
-  // Limit candidates to 10 unique elements to conform to Firestore's standard limits and keep performance high
   const filteredCandidates = Array.from(new Set(candidates)).filter(Boolean).slice(0, 10);
   if (filteredCandidates.length === 0) return null;
 
-  console.log("Iniciando búsqueda de alumno con candidatos:", filteredCandidates);
+  console.log("Iniciando búsqueda de alumno con candidatos en paralelo:", filteredCandidates);
 
-  // 1. Check all candidate strings sequentially as exact Doc IDs (highly reliable for imported lists)
-  for (const cand of filteredCandidates) {
+  // 1. Direct Document ID reads done concurrently (extremely fast, 1 roundtrip total)
+  const docIdPromise = (async () => {
     try {
-      const docRef = doc(db, 'alumnos', cand);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        console.log("Alumno encontrado por Document ID directo:", cand);
-        return docSnap;
+      const fetchPromises = filteredCandidates.map(async (cand) => {
+        try {
+          const docRef = doc(db, 'alumnos', cand);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            return docSnap;
+          }
+        } catch (e) {
+          // ignore individual doc read error
+        }
+        return null;
+      });
+      const results = await Promise.all(fetchPromises);
+      return results.find(docSnap => docSnap !== null && docSnap !== undefined) || null;
+    } catch (err) {
+      console.warn("Direct document reads parallel execution failed:", err);
+      return null;
+    }
+  })();
+
+  // 2. Query Firestore by the 'usuario' field using 'in' operator concurrently
+  const queryINPromise = (async () => {
+    try {
+      const q = query(collection(db, 'alumnos'), where('usuario', 'in', filteredCandidates));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        return querySnapshot.docs[0];
       }
     } catch (err) {
-      console.warn(`Intento de ID de documento '${cand}' falló o fue omitido`, err);
+      console.warn("Filtro IN de Firestore falló para 'alumnos':", err);
     }
-  }
+    return null;
+  })();
 
-  // 2. Query Firestore by the 'usuario' field using 'in' operator
-  try {
-    const q = query(collection(db, 'alumnos'), where('usuario', 'in', filteredCandidates));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      console.log("Alumno encontrado por coincidencia 'usuario' IN.");
-      return querySnapshot.docs[0];
-    }
-  } catch (err) {
-    console.warn("Filtro IN de Firestore falló para 'alumnos'. Ejecutando consultas individuales...", err);
-  }
-
-  // 3. Fallback to individual exact queries if the 'in' operator has indexing constraints
-  for (const cand of filteredCandidates) {
+  // 3. Fallback exact value query checks in parallel
+  const queryExactPromise = (async () => {
     try {
-      const qExact = query(collection(db, 'alumnos'), where('usuario', '==', cand));
-      const qsExact = await getDocs(qExact);
-      if (!qsExact.empty) {
-        console.log("Alumno encontrado por exactitud de 'usuario':", cand);
-        return qsExact.docs[0];
-      }
+      const exactPromises = filteredCandidates.map(async (cand) => {
+        try {
+          const qExact = query(collection(db, 'alumnos'), where('usuario', '==', cand));
+          const qsExact = await getDocs(qExact);
+          if (!qsExact.empty) {
+            return qsExact.docs[0];
+          }
+        } catch (e) {
+          // ignore individual query error
+        }
+        return null;
+      });
+      const results = await Promise.all(exactPromises);
+      return results.find(docSnap => docSnap !== null && docSnap !== undefined) || null;
     } catch (err) {
-      console.warn(`Query exacta 'usuario' == '${cand}' falló`, err);
+      console.warn("Exact query lookup failed:", err);
+      return null;
     }
-  }
+  })();
 
-  return null;
+  // Race/combine results. Return the first valid database match found.
+  const [queryResult, docIdResult, exactQueryResult] = await Promise.all([
+    queryINPromise,
+    docIdPromise,
+    queryExactPromise
+  ]);
+
+  return queryResult || docIdResult || exactQueryResult || null;
 };
 
 interface QRScannerModalProps {
@@ -184,15 +210,15 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         html5QrCodeRef.current = scanner;
 
         const config = {
-          fps: 20, // High frame rate scan processing
+          fps: 24, // High frame rate scan processing
           qrbox: (width: number, height: number) => {
             const min = Math.min(width, height);
             return {
-              width: Math.floor(min * 0.7),
-              height: Math.floor(min * 0.7)
+              width: Math.floor(min * 0.85),
+              height: Math.floor(min * 0.85)
             };
           },
-          aspectRatio: 1.0, // Force square layout for optimal scanning alignment
+          aspectRatio: 1.333333, // 4:3 Aspect Ratio standard for high-resolution mobile back lenses
         };
 
         const cameraConfig = {
@@ -228,15 +254,15 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
             html5QrCodeRef.current = scanner;
 
             const config = {
-              fps: 20,
+              fps: 24,
               qrbox: (width: number, height: number) => {
                 const min = Math.min(width, height);
                 return {
-                  width: Math.floor(min * 0.7),
-                  height: Math.floor(min * 0.7)
+                  width: Math.floor(min * 0.85),
+                  height: Math.floor(min * 0.85)
                 };
               },
-              aspectRatio: 1.0,
+              aspectRatio: 1.333333,
             };
 
             await scanner.start(
@@ -307,7 +333,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         )}
       </div>
 
-      <div className="relative w-full max-w-[280px] sm:max-w-xs md:max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(234,88,12,0.2)] mt-4">
+      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border-4 border-orange-500 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(249,115,22,0.3)] mt-5 bg-[#0a0502]">
         {cameraError ? (
           <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
             <Camera size={32} className="text-neutral-600 mb-2" />
@@ -323,8 +349,13 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           </div>
         ) : (
           <>
-            <div id="qr-reader" className="w-full h-full min-h-[240px]" style={{ position: 'relative' }} />
-            <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-scanline pointer-events-none" />
+            <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
+            {/* Custom High-Tech Sci-Fi Frame Brackets */}
+            <div className="qr-scanner-overlay">
+              <div className="qr-scanner-overlay-inner" />
+            </div>
+            {/* Animated Laser Scanning Line */}
+            <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,1)] animate-scanline pointer-events-none z-[25]" />
           </>
         )}
       </div>
@@ -362,7 +393,30 @@ export default function StartScreen() {
   const [verifying, setVerifying] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(0);
 
+  // Keep track of the currently validated student in react state to manage form validation state in two steps
+  const [validatedStudent, setValidatedStudent] = useState<{
+    fullName: string;
+    userName: string;
+    gradeInfo: string;
+    sexo: string;
+  } | null>(null);
+
   const handleStart = async () => {
+    // If we have already validated a student, and the display input corresponds to their name/user, we immediately start!
+    const isNameMatch = validatedStudent && (
+      name.trim().toLowerCase() === validatedStudent.fullName.toLowerCase() ||
+      name.trim().toLowerCase() === validatedStudent.userName.toLowerCase()
+    );
+
+    if (validatedStudent && isNameMatch) {
+      console.log("Iniciando aventura con estudiante validado:", validatedStudent);
+      // Ensure Game Store preserves latest info
+      setPlayerInfo(validatedStudent.fullName, validatedStudent.userName, validatedStudent.gradeInfo);
+      startLevel(selectedLevel);
+      setPhase('intro');
+      return;
+    }
+
     const candidates = getStudentUserCandidates(name);
     if (candidates.length === 0) {
       setError('Ingresa tu usuario asignado o escanea tu QR');
@@ -392,6 +446,16 @@ export default function StartScreen() {
         // Save validated details to Game Store
         setPlayerInfo(fullName, dbUsuario, gradeInfo);
 
+        // Store validation locally so we can require a confirmation start click
+        const valObj = {
+          fullName,
+          userName: dbUsuario,
+          gradeInfo,
+          sexo: studentData.sexo || ''
+        };
+        setValidatedStudent(valObj);
+        setName(fullName); // Replace username string input with beautiful full name of student!
+
         const sexo = studentData.sexo || '';
         if (sexo === 'Femenino') {
           setGender('female');
@@ -399,11 +463,10 @@ export default function StartScreen() {
           setGender('male');
         }
 
-        // Advance to cinematic introduction
-        startLevel(selectedLevel);
-        setPhase('intro');
+        // Do not auto-advance on the first manual validation, so they can see who they are and select Warrior/Mystic role freely!
+        setError(''); // clear errors
       } else {
-        setError('El usuario de héroe no se encuentra en "mate-experimental". Inténtalo de nuevo.');
+        setError('El usuario de héroe no se encuentra en "mate-experimental". Inténtalo de nuevo o juega como Invitado.');
       }
     } catch (err: any) {
       console.error("Firebase Student lookup error:", err);
@@ -417,7 +480,7 @@ export default function StartScreen() {
     setScanning(false);
     const candidates = getStudentUserCandidates(decodedText);
     
-    // Choose the cleanest lowercase user identifier as the default text to show in input field
+    // Set a quick temporary username in state while verifying
     const primaryUser = candidates.find(c => c === c.toLowerCase()) || candidates[0] || decodedText.trim();
     setName(primaryUser);
 
@@ -447,8 +510,18 @@ export default function StartScreen() {
         const seccion = studentData.seccion ? `Sección ${studentData.seccion}` : '';
         const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
 
-        // Save validated details to Game Store
+        // Save validated details to Game Store (this updates store)
         setPlayerInfo(fullName, dbUsuario, gradeInfo);
+
+        // Save validated student react state
+        const valObj = {
+          fullName,
+          userName: dbUsuario,
+          gradeInfo,
+          sexo: studentData.sexo || ''
+        };
+        setValidatedStudent(valObj);
+        setName(fullName); // Set input field value to student's FULL name!
 
         const sexo = studentData.sexo || '';
         if (sexo === 'Femenino') {
@@ -457,9 +530,9 @@ export default function StartScreen() {
           setGender('male');
         }
 
-        // Advance to cinematic introduction
-        startLevel(selectedLevel);
-        setPhase('intro');
+        // QR Scanned Successfully! Do NOT automatically jump to the next screen!
+        // This lets candidates select Guerrero or Mística and review details before clicking "Iniciar Crónica".
+        setError('');
       } else {
         setError(`Código QR detectado ("${primaryUser}"), pero no figura en la base de datos "mate-experimental".`);
       }
@@ -608,6 +681,17 @@ export default function StartScreen() {
               </button>
             </div>
             
+            {validatedStudent && (
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-2.5 mt-2 flex flex-col items-center gap-0.5 text-center shadow-lg">
+                <span className="text-[7.5px] text-orange-400 font-extrabold uppercase tracking-[0.2em]">Héroe Identificado</span>
+                <span className="text-white font-serif font-black text-xs sm:text-sm uppercase tracking-tight">{validatedStudent.fullName}</span>
+                <span className="text-[8px] text-white/50 font-mono tracking-wider font-bold">{validatedStudent.gradeInfo}</span>
+                <p className="text-[7px] text-yellow-500 leading-none tracking-widest font-extrabold uppercase mt-1.5 animate-pulse">
+                  ★ ¡ELIGE TU ROL DE ABAJO Y COMENCEMOS! ★
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="flex flex-col gap-1 text-center mt-1">
                 <p className="text-red-400 text-[9px] font-black animate-shake leading-tight">{error}</p>
