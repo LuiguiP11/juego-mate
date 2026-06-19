@@ -51,12 +51,11 @@ const parseScannedUser = (text: string): string => {
     // Not a valid URL
   }
 
-  // 3. Fallback to raw string, lowercased, matching firestore format
+  // 3. Normalized string: lowercase, strip accents, but KEEP spaces/dots/hyphens/underscores to avoid breaking student IDs
   return cleaned
     .toLowerCase()
     .normalize("NFD") // split accent marks
     .replace(/[\u0300-\u036f]/g, "") // remove accent marks
-    .replace(/[^a-z0-9._-]/g, "") // keep lowercase alphanumeric, dots, and hyphens/underscores
     .trim();
 };
 
@@ -68,7 +67,10 @@ interface QRScannerModalProps {
 
 function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
   const [fileError, setFileError] = useState('');
+  const [cameraError, setCameraError] = useState('');
   const [activeScanner, setActiveScanner] = useState<Html5Qrcode | null>(null);
+
+  const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
@@ -113,7 +115,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           console.warn("Retrying with camera list fallback due to facingMode environment error:", firstErr);
           if (!isMounted) return;
           
-          // Fallback: list all cameras and pick any available camera (usually rear camera is lists' last camera)
+          // Fallback: list all cameras and pick any available camera
           const cameras = await Html5Qrcode.getCameras();
           if (cameras && cameras.length > 0) {
             const selectedCameraId = cameras[cameras.length - 1].id;
@@ -135,12 +137,16 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
               () => {}
             );
           } else {
-            throw new Error("No se encontraron cámaras compatibles.");
+            throw new Error("No se encontraron cámaras de video en este dispositivo.");
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Camera access error:", err);
-        // Do not immediately fail! Give the option of using file selector without showing alert blocking
+        if (isMounted) {
+          setCameraError(
+            err?.message || "No se pudo encender la cámara automática. Es posible que los permisos de cámara estén bloqueados por el navegador o por la pestaña."
+          );
+        }
       }
     };
 
@@ -178,7 +184,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       onSuccess(decodedText);
     } catch (err) {
       console.error("File scanning error", err);
-      setFileError("No se detectó un código QR válido en la imagen. Sube una foto nítida e inténtalo de nuevo.");
+      setFileError("No se detectó un código QR válido en la imagen. Intenta con una captura nítida.");
     }
   };
 
@@ -187,26 +193,51 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-center p-4 backdrop-blur-xl"
+      className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-center p-4 backdrop-blur-xl shrink-0 overflow-y-auto"
     >
-      <div className="absolute top-4 inset-x-4 text-center">
-        <span className="text-[9px] text-orange-500 font-extrabold tracking-[0.3em] uppercase block">Lector del Santuario</span>
-        <p className="text-white/60 text-[10px] max-w-sm mx-auto mt-1 leading-tight">
-          Alinea tu código QR frente al lente. Si estás dentro de la ventana de vista previa, te recomendamos abrir la app en una pesta&ntilde;a nueva si tu cámara no responde.
-        </p>
+      <div className="w-full max-w-sm text-center flex flex-col items-center mt-2">
+        <span className="text-[10px] text-orange-500 font-extrabold tracking-[0.3em] uppercase block">Lector de Credenciales QR</span>
+        
+        {isInsideIframe && (
+          <div className="mt-2 bg-orange-500/10 border border-orange-500/30 p-2 sm:p-3 rounded-xl max-w-sm text-center">
+            <p className="text-orange-400 text-[10px] font-black leading-snug">
+              ⚠️ Estás jugando dentro de la vista previa (iframe) de Google AI Studio.
+            </p>
+            <p className="text-white/60 text-[9px] mt-1 leading-relaxed">
+              Los navegadores bloquean la cámara dentro de vistas previas. Por favor, haz clic en el botón de <span className="text-orange-300 font-bold uppercase">&quot;Abrir en pestaña nueva&quot;</span> en la esquina superior derecha del navegador para jugar con tu cámara habilitada, o bien:
+            </p>
+          </div>
+        )}
       </div>
 
-      <div className="relative w-full max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(234,88,12,0.3)] animate-panic mt-12">
-        <div id="qr-reader" className="w-full h-full min-h-[280px]" style={{ position: 'relative' }} />
-        <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-scanline pointer-events-none" />
+      <div className="relative w-full max-w-[280px] sm:max-w-xs md:max-w-sm aspect-square border-4 border-orange-600 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(234,88,12,0.2)] mt-4">
+        {cameraError ? (
+          <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
+            <Camera size={32} className="text-neutral-600 mb-2" />
+            <p className="text-white/70 text-[10px] sm:text-xs font-semibold leading-relaxed">
+              No se pudo activar la cámara de forma directa.
+            </p>
+            <p className="text-neutral-500 text-[9px] mt-1 leading-relaxed max-w-[90%]">
+              {cameraError}
+            </p>
+            <span className="text-orange-400 text-[9px] font-bold mt-3 block">
+              ¡Puedes subir una imagen/foto del código QR en su lugar!
+            </span>
+          </div>
+        ) : (
+          <>
+            <div id="qr-reader" className="w-full h-full min-h-[240px]" style={{ position: 'relative' }} />
+            <div className="absolute inset-x-0 top-1/2 h-1 bg-orange-500 shadow-[0_0_20px_rgba(255,165,0,1)] animate-scanline pointer-events-none" />
+          </>
+        )}
       </div>
 
       {/* Hidden element for file scanning */}
       <div id="qr-reader-file" className="hidden" />
 
-      <div className="mt-6 flex flex-col items-center gap-3 w-full max-w-sm">
-        {/* File upload option */}
-        <label className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-orange-500 hover:bg-orange-950/20 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer w-[80%]">
+      <div className="mt-4 flex flex-col items-center gap-2.5 w-full max-w-sm">
+        {/* File upload option as primary fallback */}
+        <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 hover:border-orange-500 hover:bg-orange-950/20 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer w-[80%]">
           <Camera size={14} className="text-orange-500" />
           Subir Foto de QR
           <input 
@@ -218,14 +249,14 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         </label>
 
         {fileError && (
-          <p className="text-red-400 text-[10px] font-semibold text-center max-w-[90%] px-2 py-1 bg-red-950/40 border border-red-900/40 rounded">
+          <p className="text-red-400 text-[9px] font-medium text-center max-w-[90%] px-2 py-1 bg-red-950/40 border border-red-900/10 rounded">
             {fileError}
           </p>
         )}
 
         <button
           onClick={onClose}
-          className="mt-2 px-8 py-3 bg-red-600/10 border border-red-600/30 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all active:scale-95 cursor-pointer"
+          className="mt-1 px-6 py-2.5 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[9px] transition-all active:scale-95 cursor-pointer"
         >
           Cerrar Lector
         </button>
@@ -491,35 +522,6 @@ export default function StartScreen() {
               </button>
             </div>
             
-            {/* Advanced configurations for Note generation (Trimestre, Actividad) */}
-            <div className="pt-2 border-t border-white/5 space-y-2 bg-black/10 p-2 rounded-lg">
-              <span className="text-[7px] uppercase tracking-[0.2em] text-orange-400 font-extrabold block">Configuración de Nota</span>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[6px] uppercase tracking-wider text-white/40 block leading-none">Trimestre</label>
-                  <select
-                    value={playerTrimestre}
-                    onChange={(e) => setPlayerTrimestre(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-[9px] sm:text-[10px] outline-none focus:border-orange-500"
-                  >
-                    <option value="T1">1er Trimestre (T1)</option>
-                    <option value="T2">2do Trimestre (T2)</option>
-                    <option value="T3">3er Trimestre (T3)</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[6px] uppercase tracking-wider text-white/40 block leading-none">Actividad</label>
-                  <input
-                    type="text"
-                    value={playerActividad}
-                    onChange={(e) => setPlayerActividad(e.target.value)}
-                    placeholder="Ej: Tarea 3"
-                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-white text-[9px] sm:text-[10px] outline-none focus:border-orange-500 font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-
             {error && (
               <div className="flex flex-col gap-1 text-center mt-1">
                 <p className="text-red-400 text-[9px] font-black animate-shake leading-tight">{error}</p>
