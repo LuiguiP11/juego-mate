@@ -578,7 +578,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         )}
       </div>
 
-      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border-4 border-orange-500 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(249,115,22,0.3)] mt-5 bg-[#0a0502] flex items-center justify-center">
+      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border border-white/10 rounded-2xl overflow-hidden mt-5 bg-[#0a0502] flex items-center justify-center">
         {activeTab === 'camera' ? (
           cameraError ? (
             <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
@@ -599,12 +599,6 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           ) : (
             <>
               <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
-              {/* Custom High-Tech Sci-Fi Frame Brackets */}
-              <div className="qr-scanner-overlay">
-                <div className="qr-scanner-overlay-inner" />
-              </div>
-              {/* Animated Laser Scanning Line */}
-              <div className="absolute inset-x-0 h-1.5 bg-[#22c55e] shadow-[0_0_15px_#22c55e,0_0_30px_#39ff14,0_0_50px_#39ff14] animate-qr-scanline pointer-events-none z-[25] top-0" />
             </>
           )
         ) : (
