@@ -370,8 +370,19 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         scanner = new Html5Qrcode("qr-reader");
         html5QrCodeRef.current = scanner;
 
+        // Dynamic scanner box (70% of minimum viewfinder edge) for high precision on small phone screens
+        const qrBoxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const qrboxSize = Math.floor(minEdge * 0.7);
+          return {
+            width: qrboxSize,
+            height: qrboxSize
+          };
+        };
+
         const config = {
-          fps: 30, // Faster scanning speed
+          fps: 15, // Smooth stable scanning frame rate
+          qrbox: qrBoxFunction,
           aspectRatio: undefined // Native aspect ratio prevents stretching
         };
 
@@ -380,25 +391,39 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           await scanner.start(
             activeCameraId,
             config,
-            (decodedText) => {
+            async (decodedText) => {
               if (isMounted) {
-                scanner?.stop()
-                  .then(() => onSuccessRef.current(decodedText))
-                  .catch(() => onSuccessRef.current(decodedText));
+                // Turn off camera stream completely BEFORE closing the React modal overlay to avoid corruption/freezing
+                if (scanner && scanner.isScanning) {
+                  try {
+                    await scanner.stop();
+                  } catch (e) {
+                    console.error("Error al apagar el escáner:", e);
+                  }
+                }
+                html5QrCodeRef.current = null;
+                onSuccessRef.current(decodedText);
               }
             },
-            () => {} // Silent search frame
+            () => {} // Silent search frame (ignore partial non-match reads)
           );
         } else {
           console.log("Starting QR scanner with facingMode fallback...");
           await scanner.start(
             { facingMode: "environment" },
             config,
-            (decodedText) => {
+            async (decodedText) => {
               if (isMounted) {
-                scanner?.stop()
-                  .then(() => onSuccessRef.current(decodedText))
-                  .catch(() => onSuccessRef.current(decodedText));
+                // Turn off camera stream completely BEFORE closing the React modal overlay to avoid corruption/freezing
+                if (scanner && scanner.isScanning) {
+                  try {
+                    await scanner.stop();
+                  } catch (e) {
+                    console.error("Error al apagar el escáner:", e);
+                  }
+                }
+                html5QrCodeRef.current = null;
+                onSuccessRef.current(decodedText);
               }
             },
             () => {}
@@ -432,11 +457,39 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     };
   }, [activeCameraId, activeTab]);
 
+  const handleCameraChange = async (newId: string) => {
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+      } catch (e) {
+        console.error("Error stopping camera before switch:", e);
+      }
+      html5QrCodeRef.current = null;
+    }
+    setActiveCameraId(newId);
+  };
+
   const handleSwitchCamera = async () => {
     if (cameras.length <= 1) return;
     const currentIndex = cameras.findIndex(c => c.id === activeCameraId);
     const nextIndex = (currentIndex + 1) % cameras.length;
-    setActiveCameraId(cameras[nextIndex].id);
+    await handleCameraChange(cameras[nextIndex].id);
+  };
+
+  const handleClose = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+      } catch (e) {
+        console.error("Error al detener cámara en cancelación:", e);
+      }
+      html5QrCodeRef.current = null;
+    }
+    onClose();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -512,7 +565,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
             <Camera size={12} className="text-orange-500 shrink-0" />
             <select
               value={activeCameraId}
-              onChange={(e) => setActiveCameraId(e.target.value)}
+              onChange={(e) => handleCameraChange(e.target.value)}
               className="w-full bg-transparent border-none text-white text-[10px] sm:text-xs font-mono font-bold outline-none cursor-pointer py-1.5"
             >
               {cameras.map((cam) => (
@@ -604,7 +657,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           </button>
         )}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           className="px-8 py-3 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all active:scale-95 cursor-pointer"
         >
           Cerrar Lector
