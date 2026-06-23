@@ -114,6 +114,27 @@ const getStudentUserCandidates = (text: string): string[] => {
   return Array.from(candidatesSet).filter(Boolean).slice(0, 30);
 };
 
+// Simple Levenshtein distance algorithm for robust typo tolerance
+const getEditDistance = (a: string, b: string): number => {
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+};
+
 /**
  * Searches the 'alumnos' collection using candidate usernames or Document IDs in parallel.
  * Checks direct document IDs and queries concurrently (1 roundtrip instead of sequential).
@@ -169,6 +190,90 @@ const findStudentByCandidates = async (candidates: string[]) => {
     }
   } catch (err) {
     console.warn("Error en búsqueda paralela de alumno:", err);
+  }
+
+  // FALLBACK: Full-collection scan for case-insensitive, space-insensitive, and substring matching!
+  console.log("No se encontró coincidencia directa. Iniciando escaneo de colección completa para búsqueda flexible...");
+  try {
+    const snapshot = await getDocs(collection(db, 'alumnos'));
+    console.log(`Diagnostic: Se cargaron ${snapshot.size} alumnos de la base de datos.`);
+    
+    // Log the database content to console for diagnostic purposes
+    snapshot.docs.forEach(d => {
+      const data = d.data();
+      console.log(`- Alumno ID: "${d.id}", usuario: "${data.usuario || data.Usuario || ''}", nombreCompleto: "${data.nombreCompleto || data.NombreCompleto || ''}", nombre: "${data.nombre || data.Nombre || ''} ${data.apellido || data.Apellido || ''}"`);
+    });
+
+    // Helper to normalize strings for robust comparison (lowercase, alphanumeric only)
+    const normalize = (s: string) => s.toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // remove accents
+      .replace(/[^a-z0-9]/g, ""); // remove dots, spaces, special chars
+
+    const normalizedCandidates = filteredCandidates.map(normalize);
+
+    // Try to find a document with ID that matches normalized candidates
+    let bestMatch = snapshot.docs.find(d => {
+      const normId = normalize(d.id);
+      return normalizedCandidates.includes(normId);
+    });
+
+    // If not found, try to match 'usuario' or 'Usuario' field after normalization
+    if (!bestMatch) {
+      bestMatch = snapshot.docs.find(d => {
+        const data = d.data();
+        const usr = data.usuario || data.Usuario || '';
+        if (!usr) return false;
+        return normalizedCandidates.includes(normalize(usr));
+      });
+    }
+
+    // If still not found, try to match 'nombre' + 'apellido' or 'nombreCompleto'
+    if (!bestMatch) {
+      bestMatch = snapshot.docs.find(d => {
+        const data = d.data();
+        const fullName = (data.nombreCompleto || data.NombreCompleto || `${data.nombre || data.Nombre || ''} ${data.apellido || data.Apellido || ''}`).trim();
+        if (!fullName) return false;
+        const normFullName = normalize(fullName);
+        return normalizedCandidates.some(cand => normFullName.includes(cand) || cand.includes(normFullName));
+      });
+    }
+
+    // If still not found, try Levenshtein distance matching for near typos (edit distance <= 2)
+    if (!bestMatch) {
+      let minDistance = 999;
+      let closestDoc: any = null;
+
+      snapshot.docs.forEach(d => {
+        const data = d.data();
+        const usr = (data.usuario || data.Usuario || d.id || '').toLowerCase();
+        if (!usr) return;
+
+        normalizedCandidates.forEach(cand => {
+          const normUsr = normalize(usr);
+          // Only check if length difference is small to avoid unrelated matches
+          if (Math.abs(normUsr.length - cand.length) <= 2) {
+            const dist = getEditDistance(normUsr, cand);
+            if (dist < minDistance && dist <= 2) {
+              minDistance = dist;
+              closestDoc = d;
+            }
+          }
+        });
+      });
+
+      if (closestDoc) {
+        console.log(`Coincidencia aproximada encontrada por distancia de edición (${minDistance}):`, closestDoc.id);
+        bestMatch = closestDoc;
+      }
+    }
+
+    if (bestMatch) {
+      console.log("Alumno localizado mediante escaneo flexible de la colección completa:", bestMatch.id);
+      return bestMatch;
+    }
+  } catch (fallbackErr) {
+    console.error("Error en búsqueda flexible por escaneo de colección:", fallbackErr);
   }
 
   return null;
