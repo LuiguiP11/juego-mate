@@ -31,7 +31,7 @@
 .qr-scanner-overlay {
   position: absolute;
   inset: 16px;
-  border: 1px solid rgba(249, 115, 22, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.2); /* Tailwind green-500, subtle background */
   border-radius: 16px;
   pointer-events: none;
   z-index: 20;
@@ -45,7 +45,7 @@
   position: absolute;
   width: 24px;
   height: 24px;
-  border-color: rgb(249, 115, 22); /* Tailwind orange-500 */
+  border-color: rgb(34, 197, 94); /* Tailwind green-500, bright high-tech green */
   border-style: solid;
   pointer-events: none;
 }

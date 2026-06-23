@@ -34,6 +34,10 @@ interface GameState {
   playerName: string;
   playerUser: string;
   playerGrade: string;
+  playerNombre: string;
+  playerApellido: string;
+  playerGradoSolo: string;
+  playerSeccionSolo: string;
   playerActividad: string;
   playerTrimestre: string;
   gender: 'male' | 'female';
@@ -53,7 +57,15 @@ interface GameState {
   // Actions
   setPhase: (phase: GamePhase) => void;
   setGraphicsQuality: (quality: 'high' | 'low') => void;
-  setPlayerInfo: (name: string, user: string, grade: string) => void;
+  setPlayerInfo: (
+    name: string,
+    user: string,
+    grade: string,
+    nombre?: string,
+    apellido?: string,
+    gradoSolo?: string,
+    seccionSolo?: string
+  ) => void;
   setPlayerActividad: (actividad: string) => void;
   setPlayerTrimestre: (trimestre: string) => void;
   setGender: (gender: 'male' | 'female') => void;
@@ -138,6 +150,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   playerName: '',
   playerUser: '',
   playerGrade: '',
+  playerNombre: '',
+  playerApellido: '',
+  playerGradoSolo: '',
+  playerSeccionSolo: '',
   playerActividad: 'Tarea 3',
   playerTrimestre: 'T2',
   gender: 'male',
@@ -165,7 +181,40 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   })),
   
-  setPlayerInfo: (name, user, grade) => set({ playerName: name, playerUser: user, playerGrade: grade }),
+  setPlayerInfo: (name, user, grade, nombre, apellido, gradoSolo, seccionSolo) => {
+    let finalNombre = nombre || '';
+    let finalApellido = apellido || '';
+    let finalGrado = gradoSolo || '';
+    let finalSeccion = seccionSolo || '';
+
+    if (!finalNombre && name) {
+      const parts = name.trim().split(/\s+/);
+      finalNombre = parts[0] || '';
+      if (parts.length > 1) {
+        finalApellido = parts.slice(1).join(' ');
+      }
+    }
+
+    if (!finalGrado && grade) {
+      if (grade.includes(' - ')) {
+        const parts = grade.split(' - ');
+        finalGrado = parts[0] || '';
+        finalSeccion = parts[1] ? parts[1].replace(/Sección\s+/i, '').trim() : '';
+      } else {
+        finalGrado = grade;
+      }
+    }
+
+    set({ 
+      playerName: name, 
+      playerUser: user, 
+      playerGrade: grade,
+      playerNombre: finalNombre,
+      playerApellido: finalApellido,
+      playerGradoSolo: finalGrado,
+      playerSeccionSolo: finalSeccion
+    });
+  },
   
   setPlayerActividad: (actividad) => set({ playerActividad: actividad }),
 
@@ -255,54 +304,68 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   saveScoreToFirebase: async (levelIndex, scoreValue) => {
-    const { playerUser } = get();
+    const { 
+      playerUser, 
+      playerNombre, 
+      playerApellido, 
+      playerGradoSolo, 
+      playerSeccionSolo, 
+      playerTrimestre 
+    } = get();
+
     if (!playerUser) {
       console.warn("No player logged in. Skipping Firestore write.");
       return false;
     }
 
-    const forcedActividad = 'Tarea 3';
-    const forcedTrimestre = 'T2';
-
     const level = LEVELS[levelIndex];
     if (!level) return false;
     const levelName = level.name;
-    
-    // Normalize and clean level name to be lowercase, plain latin characters and no accents or spaces
-    const cleanLevelName = levelName
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, '_');
 
-    const cleanActividadName = forcedActividad
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, '_');
+    // Map levelIndex to clean ID-friendly names & user-friendly display names
+    const levelActivityNames: Record<number, string> = {
+      0: "juego_enteros",
+      1: "juego_algebra",
+      2: "juego_fracciones",
+      3: "juego_potencias",
+      4: "juego_polinomios"
+    };
+    const prettyActivityNames: Record<number, string> = {
+      0: "Juego de Enteros",
+      1: "Juego de Álgebra",
+      2: "Juego de Fracciones",
+      3: "Juego de Potencias",
+      4: "Juego de Polinomios"
+    };
 
-    // ID structured format:
-    // usuario{trimestre}_actividad.toLowerCase()_nivel{levelName.toLowerCase().replace(/\s+/g, '_')}
-    const trimesterSuffix = forcedTrimestre.toLowerCase();
-    const docId = `${playerUser}_${trimesterSuffix}_${cleanActividadName}_nivel_${cleanLevelName}`;
+    const cleanUnidad = (playerTrimestre || 'T2').toLowerCase().trim();
+    const cleanActividadId = levelActivityNames[levelIndex] || "juego_mate";
+    const prettyActividad = prettyActivityNames[levelIndex] || `Juego de ${levelName}`;
 
-    // Date in DD/MM/YYYY
+    // Requirement 5: Document ID = [usuario]_[unidad]_[actividad] in lowercase, without spaces
+    const docId = `${playerUser.toLowerCase().trim()}_${cleanUnidad}_${cleanActividadId}`;
+
+    // Requirement 6: Date in YYYY-MM-DD
     const today = new Date();
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
     const yyyy = today.getFullYear();
-    const dateStr = `${dd}/${mm}/${yyyy}`;
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const formattedDate = `${yyyy}-${mm}-${dd}`;
 
     try {
       const docRef = doc(db, 'notas', docId);
       
       const docData = {
         usuario: playerUser,
-        actividad: forcedActividad,
-        subActividad: `JHIROS Adventure: ${levelName}`,
-        punteo: scoreValue, // Puntos asignados (2.0)
-        trimestre: forcedTrimestre,
-        fecha: dateStr,
+        nombre: playerNombre,
+        apellido: playerApellido,
+        grado: playerGradoSolo,
+        seccion: playerSeccionSolo,
+        actividad: prettyActividad,
+        punteo: 100.0, // Nota obtenida, decimal de 0 a 100 (complete level = 100.0)
+        unidad: cleanUnidad,
+        trimestre: cleanUnidad.toUpperCase(),
+        fecha: formattedDate,
         timestamp: serverTimestamp()
       };
 

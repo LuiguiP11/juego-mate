@@ -205,92 +205,76 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         html5QrCodeRef.current = scanner;
 
         const config = {
-          fps: 30, // Max decoding speed
-          aspectRatio: undefined, // Let the browser choose native aspect ratio to prevent stretching/warping
+          fps: 30, // High decoding speed
+          aspectRatio: undefined, // Native aspect ratio
         };
 
-        const cameraConfig = {
-          facingMode: "environment" // Force rear lens usage
-        };
-
-        await scanner.start(
-          cameraConfig,
-          config,
-          (decodedText) => {
-            if (isMounted) {
-              // Stop camera immediately on successful detection
-              scanner.stop()
-                .then(() => onSuccess(decodedText))
-                .catch((err) => {
-                  console.error("Error stopping scanner after success:", err);
-                  onSuccess(decodedText); // execute callback regardless
-                });
-            }
-          },
-          () => {} // silent search frame logging
-        );
-      } catch (err: any) {
-        console.warn("Direct environment camera launch failed, searching for cameras explicitly...", err);
-        if (!isMounted) return;
-
-        // Fallback: list camera hardware manually for non-standard environments
+        console.log("Listing system cameras for standard focus lens selection...");
+        let cameras: any[] = [];
         try {
-          const cameras = await Html5Qrcode.getCameras();
-          if (cameras && cameras.length > 0) {
-            // Prioritize main rear-facing camera to avoid macro/wide lenses with fixed close focus
-            let selectedCamera = cameras.find(c => {
+          cameras = await Html5Qrcode.getCameras();
+        } catch (listErr) {
+          console.warn("Failed to list cameras, trying environment flag directly", listErr);
+        }
+
+        if (cameras && cameras.length > 0) {
+          // Prioritize standard rear camera (excluding macro/wide/ultra lenses that cannot focus on QR codes)
+          let selectedCamera = cameras.find(c => {
+            const label = c.label.toLowerCase();
+            const isRear = label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
+            const isSpecialtyLens = label.includes('wide') || label.includes('ultra') || label.includes('macro') || label.includes('tele') || label.includes('depth') || label.includes('virtual') || label.includes('0');
+            return isRear && !isSpecialtyLens;
+          });
+
+          // Fallback to any rear camera
+          if (!selectedCamera) {
+            selectedCamera = cameras.find(c => {
               const label = c.label.toLowerCase();
-              const isRear = label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
-              const isMain = label.includes('main') || label.includes('primaria') || label.includes('0') || (!label.includes('wide') && !label.includes('tele') && !label.includes('macro'));
-              return isRear && isMain;
+              return label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
             });
-
-            // Fallback 2: Any back/rear camera in list
-            if (!selectedCamera) {
-              selectedCamera = cameras.find(c => {
-                const label = c.label.toLowerCase();
-                return label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
-              });
-            }
-
-            // Fallback 3: First available camera (usually main standard camera)
-            if (!selectedCamera) {
-              selectedCamera = cameras[0];
-            }
-
-            const selectedCameraId = selectedCamera.id;
-            console.log("Iniciando escáner con cámara recomendada:", selectedCamera.label, "ID:", selectedCameraId);
-
-            const scanner = html5QrCodeRef.current || new Html5Qrcode("qr-reader");
-            html5QrCodeRef.current = scanner;
-
-            const config = {
-              fps: 30,
-              aspectRatio: undefined,
-            };
-
-            await scanner.start(
-              selectedCameraId,
-              config,
-              (decodedText) => {
-                if (isMounted) {
-                  scanner.stop()
-                    .then(() => onSuccess(decodedText))
-                    .catch(() => onSuccess(decodedText));
-                }
-              },
-              () => {}
-            );
-          } else {
-            throw new Error("No se encontraron cámaras de video en este dispositivo.");
           }
-        } catch (fallbackErr: any) {
-          console.error("Camera boot fallback unsuccessful:", fallbackErr);
-          if (isMounted) {
-            const fallbackMessage = "No se pudo encender la cámara automática. Es posible que los permisos de la pestaña o del navegador estén bloqueados.";
-            setCameraError(fallbackMessage);
-            onError(fallbackMessage);
+
+          // Fallback to the first available camera
+          if (!selectedCamera) {
+            selectedCamera = cameras[0];
           }
+
+          console.log("Recommended camera selected:", selectedCamera.label, "ID:", selectedCamera.id);
+          
+          await scanner.start(
+            selectedCamera.id,
+            config,
+            (decodedText) => {
+              if (isMounted) {
+                scanner.stop()
+                  .then(() => onSuccess(decodedText))
+                  .catch(() => onSuccess(decodedText));
+              }
+            },
+            () => {} // Silent search frame logging
+          );
+        } else {
+          // No listed cameras, attempt direct facingMode environment
+          console.log("No listed cameras, launching environment facingMode...");
+          await scanner.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+              if (isMounted) {
+                scanner.stop()
+                  .then(() => onSuccess(decodedText))
+                  .catch(() => onSuccess(decodedText));
+              }
+            },
+            () => {}
+          );
+        }
+      } catch (err: any) {
+        console.error("Camera boot failed:", err);
+        if (isMounted) {
+          const fallbackMessage = "No se pudo encender la cámara de forma automática. Asegúrate de otorgar permisos de cámara en tu navegador e ingresar en una pestaña dedicada.";
+          setCameraError(fallbackMessage);
+          onError(fallbackMessage);
         }
       }
     };
@@ -403,6 +387,10 @@ export default function StartScreen() {
     userName: string;
     gradeInfo: string;
     sexo: string;
+    nombre: string;
+    apellido: string;
+    gradoSolo: string;
+    seccionSolo: string;
   } | null>(null);
 
   const handleStart = async () => {
@@ -410,7 +398,15 @@ export default function StartScreen() {
     // This blocks unnecessary repeated database reads and guarantees instant login.
     if (validatedStudent) {
       console.log("Iniciando aventura con estudiante ya verificado:", validatedStudent);
-      setPlayerInfo(validatedStudent.fullName, validatedStudent.userName, validatedStudent.gradeInfo);
+      setPlayerInfo(
+        validatedStudent.fullName, 
+        validatedStudent.userName, 
+        validatedStudent.gradeInfo,
+        validatedStudent.nombre,
+        validatedStudent.apellido,
+        validatedStudent.gradoSolo,
+        validatedStudent.seccionSolo
+      );
       startLevel(selectedLevel);
       setPhase('intro');
       return;
@@ -456,9 +452,9 @@ export default function StartScreen() {
           }
         }
 
-        const grado = studentData.grado || studentData.Grado || 'Grado Indefinido';
-        const seccion = (studentData.seccion || studentData.Seccion) ? `Sección ${studentData.seccion || studentData.Seccion}` : '';
-        const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
+        const gradoSolo = studentData.grado || studentData.Grado || 'Grado Indefinido';
+        const seccionSolo = studentData.seccion || studentData.Seccion || '';
+        const gradeInfo = seccionSolo ? `${gradoSolo} - Sección ${seccionSolo}` : gradoSolo;
 
         // Auto selection of gender if stored
         const sexo = studentData.sexo || studentData.Sexo || '';
@@ -472,14 +468,18 @@ export default function StartScreen() {
         }
 
         // Save validated details to Game Store
-        setPlayerInfo(fullName, dbUsuario, gradeInfo);
+        setPlayerInfo(fullName, dbUsuario, gradeInfo, nombrePart, apellidoPart, gradoSolo, seccionSolo);
 
         // Store validation locally
         setValidatedStudent({
           fullName,
           userName: dbUsuario,
           gradeInfo,
-          sexo
+          sexo,
+          nombre: nombrePart,
+          apellido: apellidoPart,
+          gradoSolo,
+          seccionSolo
         });
         setName(fullName); // Replace input text with full actual student name!
 
@@ -546,9 +546,9 @@ export default function StartScreen() {
           }
         }
 
-        const grado = studentData.grado || studentData.Grado || 'Grado Indefinido';
-        const seccion = (studentData.seccion || studentData.Seccion) ? `Sección ${studentData.seccion || studentData.Seccion}` : '';
-        const gradeInfo = seccion ? `${grado} - ${seccion}` : grado;
+        const gradoSolo = studentData.grado || studentData.Grado || 'Grado Indefinido';
+        const seccionSolo = studentData.seccion || studentData.Seccion || '';
+        const gradeInfo = seccionSolo ? `${gradoSolo} - Sección ${seccionSolo}` : gradoSolo;
 
         // Auto selection of gender if stored
         const sexo = studentData.sexo || studentData.Sexo || '';
@@ -562,14 +562,18 @@ export default function StartScreen() {
         }
 
         // Save validated details to Game Store (this updates store)
-        setPlayerInfo(fullName, dbUsuario, gradeInfo);
+        setPlayerInfo(fullName, dbUsuario, gradeInfo, nombrePart, apellidoPart, gradoSolo, seccionSolo);
 
         // Save validated student react state
         const valObj = {
           fullName,
           userName: dbUsuario,
           gradeInfo,
-          sexo
+          sexo,
+          nombre: nombrePart,
+          apellido: apellidoPart,
+          gradoSolo,
+          seccionSolo
         };
         setValidatedStudent(valObj);
         setName(fullName); // Set input field value to student's FULL name!
