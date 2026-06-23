@@ -391,11 +391,23 @@ export default function StartScreen() {
     apellido: string;
     gradoSolo: string;
     seccionSolo: string;
+    clave: string;
   } | null>(null);
 
-  const handleStart = async () => {
-    // If we have already validated a student, we immediately start!
-    // This blocks unnecessary repeated database reads and guarantees instant login.
+  // Floating confirmation window state
+  const [pendingStudent, setPendingStudent] = useState<{
+    fullName: string;
+    userName: string;
+    gradeInfo: string;
+    sexo: string;
+    nombre: string;
+    apellido: string;
+    gradoSolo: string;
+    seccionSolo: string;
+    clave: string;
+  } | null>(null);
+
+  const handleStart = () => {
     if (validatedStudent) {
       console.log("Iniciando aventura con estudiante ya verificado:", validatedStudent);
       setPlayerInfo(
@@ -409,92 +421,8 @@ export default function StartScreen() {
       );
       startLevel(selectedLevel);
       setPhase('intro');
-      return;
-    }
-
-    const candidates = getStudentUserCandidates(name);
-    if (candidates.length === 0) {
-      setError('Ingresa tu usuario asignado o escanea tu QR');
-      return;
-    }
-
-    setVerifying(true);
-    setError('');
-
-    try {
-      const studentDoc = await findStudentByCandidates(candidates);
-
-      if (studentDoc) {
-        const studentData = studentDoc.data();
-
-        // Get the actual username registered in the db
-        const dbUsuario = studentData.usuario || studentData.Usuario || candidates[0];
-
-        // Extremely robust extraction checking all common given name and surname schemas (lowercase/capitalized/Spanish/English)
-        const nombrePart = studentData.nombre || studentData.Nombre || studentData.primerNombre || studentData.nombres || studentData.Nombres || studentData.primer_nombre || '';
-        const apellidoPart = studentData.apellido || studentData.Apellido || studentData.primerApellido || studentData.apellidos || studentData.Apellidos || studentData.primer_apellido || '';
-        
-        let fullName = `${nombrePart} ${apellidoPart}`.trim();
-
-        if (!fullName) {
-          fullName = studentData.nombreCompleto || studentData.nombre_completo || studentData.displayName || studentData.NombreCompleto || '';
-        }
-
-        // Beautiful capitalized fallback from the username string if no naming fields are stored in document
-        if (!fullName) {
-          if (dbUsuario && dbUsuario.includes('.')) {
-            fullName = dbUsuario
-              .split('.')
-              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ');
-          } else {
-            fullName = dbUsuario ? (dbUsuario.charAt(0).toUpperCase() + dbUsuario.slice(1)) : 'Héroe Desconocido';
-          }
-        }
-
-        const gradoSolo = studentData.grado || studentData.Grado || 'Grado Indefinido';
-        const seccionSolo = studentData.seccion || studentData.Seccion || '';
-        const gradeInfo = seccionSolo ? `${gradoSolo} - Sección ${seccionSolo}` : gradoSolo;
-
-        // Auto selection of gender if stored
-        const sexo = studentData.sexo || studentData.Sexo || '';
-        let matchedGender: 'male' | 'female' = 'male';
-        if (sexo === 'Femenino' || sexo === 'femenino' || sexo === 'F' || sexo === 'f') {
-          matchedGender = 'female';
-          setGender('female');
-        } else {
-          matchedGender = 'male';
-          setGender('male');
-        }
-
-        // Save validated details to Game Store
-        setPlayerInfo(fullName, dbUsuario, gradeInfo, nombrePart, apellidoPart, gradoSolo, seccionSolo);
-
-        // Store validation locally
-        setValidatedStudent({
-          fullName,
-          userName: dbUsuario,
-          gradeInfo,
-          sexo,
-          nombre: nombrePart,
-          apellido: apellidoPart,
-          gradoSolo,
-          seccionSolo
-        });
-        setName(fullName); // Replace input text with full actual student name!
-
-        // IMMEDIATE TRANSITION! No double click required. Starts playing the game!
-        console.log("Validación exitosa, iniciando juego de inmediato para:", fullName);
-        startLevel(selectedLevel);
-        setPhase('intro');
-      } else {
-        setError('El usuario de héroe no figura en la base de datos de la plataforma "mate-experimental". Verifica que esté bien escrito o escanea tu QR.');
-      }
-    } catch (err: any) {
-      console.error("Firebase Student lookup error:", err);
-      setError(`Error al verificar identidad: ${err.message || 'Sin conexión.'}`);
-    } finally {
-      setVerifying(false);
+    } else {
+      setError('Por favor, escanea tu código QR primero para identificarte.');
     }
   };
 
@@ -502,7 +430,7 @@ export default function StartScreen() {
     setScanning(false);
     const candidates = getStudentUserCandidates(decodedText);
     
-    // Set a quick temporary username in state while verifying
+    // Set temporary username in name state while verifying
     const primaryUser = candidates.find(c => c === c.toLowerCase()) || candidates[0] || decodedText.trim();
     setName(primaryUser);
 
@@ -521,10 +449,10 @@ export default function StartScreen() {
       if (studentDoc) {
         const studentData = studentDoc.data();
 
-        // Get the actual username registered in the db (casing robust lookup)
+        // Get the actual username registered in the db
         const dbUsuario = studentData.usuario || studentData.Usuario || primaryUser;
 
-        // Extremely robust extraction checking all common given name and surname schemas (lowercase/capitalized/Spanish/English)
+        // Extremely robust extraction checking all common given name and surname schemas
         const nombrePart = studentData.nombre || studentData.Nombre || studentData.primerNombre || studentData.nombres || studentData.Nombres || studentData.primer_nombre || '';
         const apellidoPart = studentData.apellido || studentData.Apellido || studentData.primerApellido || studentData.apellidos || studentData.Apellidos || studentData.primer_apellido || '';
         
@@ -550,22 +478,13 @@ export default function StartScreen() {
         const seccionSolo = studentData.seccion || studentData.Seccion || '';
         const gradeInfo = seccionSolo ? `${gradoSolo} - Sección ${seccionSolo}` : gradoSolo;
 
-        // Auto selection of gender if stored
+        // Extraer clave o Clave o fallback
+        const studentClave = studentData.clave || studentData.Clave || studentData.usuario || studentData.Usuario || primaryUser;
+
         const sexo = studentData.sexo || studentData.Sexo || '';
-        let matchedGender: 'male' | 'female' = 'male';
-        if (sexo === 'Femenino' || sexo === 'femenino' || sexo === 'F' || sexo === 'f') {
-          matchedGender = 'female';
-          setGender('female');
-        } else {
-          matchedGender = 'male';
-          setGender('male');
-        }
 
-        // Save validated details to Game Store (this updates store)
-        setPlayerInfo(fullName, dbUsuario, gradeInfo, nombrePart, apellidoPart, gradoSolo, seccionSolo);
-
-        // Save validated student react state
-        const valObj = {
+        // Instead of immediate transitions or saving to verified student, set pendingStudent for the confirmation pop-up!
+        setPendingStudent({
           fullName,
           userName: dbUsuario,
           gradeInfo,
@@ -573,15 +492,9 @@ export default function StartScreen() {
           nombre: nombrePart,
           apellido: apellidoPart,
           gradoSolo,
-          seccionSolo
-        };
-        setValidatedStudent(valObj);
-        setName(fullName); // Set input field value to student's FULL name!
-
-        // IMMEDIATE TRANSITION! No double click required. Starts playing the game immediately after scanning!
-        console.log("Validación exitosa vía QR, iniciando juego de inmediato para:", fullName);
-        startLevel(selectedLevel);
-        setPhase('intro');
+          seccionSolo,
+          clave: String(studentClave)
+        });
         setError('');
       } else {
         setError(`Código QR detectado ("${primaryUser}"), pero no figura en la base de datos "mate-experimental". Verifica su escritura o escanea otro QR.`);
@@ -711,45 +624,51 @@ export default function StartScreen() {
 
         <div className="w-[94%] sm:w-full max-w-sm bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-[2rem] p-3 sm:p-6 space-y-3 sm:space-y-5 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
           <div className="space-y-2">
-            <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1">
-              <User size={8} className="text-orange-500" />
-              Usuario del Alumno (QR o Texto)
-            </label>
-            <div className="flex gap-2">
-              <div className="relative flex-1 group">
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (validatedStudent) {
-                      setValidatedStudent(null);
-                    }
-                  }}
-                  placeholder="ej: juan.perez"
-                  disabled={verifying}
-                  className="w-full bg-white/5 border-2 border-white/10 rounded-lg sm:rounded-xl px-3 py-1.5 sm:px-4 sm:py-2.5 text-white focus:border-orange-500 outline-none transition-all font-mono text-xs sm:text-base placeholder:text-white/20"
-                />
-                <div className="absolute inset-0 rounded-lg sm:rounded-xl bg-orange-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
-              </div>
-              <button
-                onClick={startQRScanner}
-                disabled={verifying}
-                className="p-2 sm:p-3 bg-gradient-to-br from-orange-600 to-orange-700 rounded-lg sm:rounded-xl text-white hover:from-orange-500 hover:to-orange-600 transition-all shadow-xl shadow-orange-600/20 flex items-center justify-center active:scale-95 group cursor-pointer disabled:opacity-50"
-                title="Escanear con QR"
-              >
-                <QrCode size={18} className="group-hover:rotate-12 transition-transform" />
-              </button>
-            </div>
-            
-            {validatedStudent && (
-              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-2.5 mt-2 flex flex-col items-center gap-0.5 text-center shadow-lg">
-                <span className="text-[7.5px] text-orange-400 font-extrabold uppercase tracking-[0.2em]">Héroe Identificado</span>
-                <span className="text-white font-serif font-black text-xs sm:text-sm uppercase tracking-tight">{validatedStudent.fullName}</span>
-                <span className="text-[8px] text-white/50 font-mono tracking-wider font-bold">{validatedStudent.gradeInfo}</span>
-                <p className="text-[7px] text-yellow-500 leading-none tracking-widest font-extrabold uppercase mt-1.5 animate-pulse">
+            {validatedStudent ? (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 sm:p-4 flex flex-col items-center gap-1 sm:gap-2 text-center shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 rounded-full blur-xl pointer-events-none" />
+                <span className="text-[7px] sm:text-[8px] text-green-400 font-extrabold uppercase tracking-[0.2em] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+                  Héroe Identificado
+                </span>
+                <span className="text-white font-serif font-black text-xs sm:text-lg uppercase tracking-tight">{validatedStudent.fullName}</span>
+                
+                <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 text-[7px] sm:text-[9px] text-white/70 font-mono tracking-wider font-bold">
+                  <span className="bg-white/5 px-2 py-0.5 rounded">{validatedStudent.gradoSolo}</span>
+                  {validatedStudent.seccionSolo && (
+                    <span className="bg-white/5 px-2 py-0.5 rounded">Sección {validatedStudent.seccionSolo}</span>
+                  )}
+                  <span className="bg-white/5 px-2 py-0.5 rounded">Clave: {validatedStudent.clave}</span>
+                </div>
+
+                <p className="text-[6.5px] sm:text-[8px] text-yellow-500 leading-none tracking-widest font-extrabold uppercase mt-1 sm:mt-2 animate-pulse">
                   ★ ¡ELIGE TU ROL DE ABAJO Y COMENCEMOS! ★
                 </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValidatedStudent(null);
+                    setError('');
+                  }}
+                  className="mt-1 sm:mt-2 text-[6.5px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-red-400/80 hover:text-red-300 transition-colors cursor-pointer bg-white/5 px-2 py-1 rounded hover:bg-white/10"
+                >
+                  Cambiar de Cuenta
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-[8px] sm:text-[10px] text-center text-white/50 tracking-wider font-medium font-mono leading-relaxed">
+                  Para acceder a Jhiro's Adventure y registrar tu progreso, por favor escanea tu código QR de alumno.
+                </p>
+                <button
+                  onClick={startQRScanner}
+                  disabled={verifying}
+                  className="w-full py-3.5 bg-gradient-to-r from-green-500 via-emerald-600 to-green-600 hover:from-green-400 hover:to-emerald-500 rounded-xl text-white font-serif text-xs sm:text-sm font-black uppercase tracking-[0.15em] shadow-[0_0_30px_rgba(34,197,94,0.25)] transition-all flex items-center justify-center gap-3 active:scale-95 group cursor-pointer disabled:opacity-50"
+                >
+                  <QrCode size={16} className="group-hover:rotate-12 transition-transform text-white" />
+                  <span>Escanear Código QR</span>
+                </button>
               </div>
             )}
 
@@ -797,20 +716,26 @@ export default function StartScreen() {
 
           <div className="pt-1 sm:pt-2 flex flex-col gap-2">
             <motion.button
-               whileHover={{ scale: verifying ? 1 : 1.02 }}
-               whileTap={{ scale: verifying ? 1 : 0.98 }}
+               whileHover={{ scale: (!validatedStudent || verifying) ? 1 : 1.02 }}
+               whileTap={{ scale: (!validatedStudent || verifying) ? 1 : 0.98 }}
                onClick={handleStart}
-               disabled={verifying}
-               className="w-full py-2 sm:py-3 bg-white text-black rounded-lg sm:rounded-xl font-serif text-xs sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-[0_15px_40px_rgba(255,255,255,0.05)] hover:bg-orange-500 hover:text-white transition-all flex items-center justify-center gap-2 sm:gap-3 group cursor-pointer disabled:opacity-50 disabled:bg-white/20 disabled:text-white/60"
+               disabled={!validatedStudent || verifying}
+               className={`w-full py-2.5 sm:py-3.5 rounded-xl font-serif text-xs sm:text-base font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2 sm:gap-3 group cursor-pointer disabled:opacity-50 ${
+                 validatedStudent 
+                   ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-[0_0_30px_rgba(249,115,22,0.45)]' 
+                   : 'bg-white/5 border border-white/10 text-white/40 cursor-not-allowed'
+               }`}
             >
-              <div className="w-5 h-5 sm:w-7 sm:h-7 bg-black/5 rounded-full flex items-center justify-center group-hover:bg-white/20">
+              <div className="w-5 h-5 sm:w-7 sm:h-7 bg-black/15 rounded-full flex items-center justify-center">
                 {verifying ? (
-                  <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : !validatedStudent ? (
+                  <Lock size={10} className="text-white/40" />
                 ) : (
-                  <Play size={10} fill="currentColor" className="ml-0.5" />
+                  <Play size={10} fill="currentColor" className="ml-0.5 text-white animate-pulse" />
                 )}
               </div>
-              {verifying ? 'VERIFICANDO...' : 'INICIAR CRÓNICA'}
+              {verifying ? 'VERIFICANDO...' : !validatedStudent ? 'ESCANEA TU QR PARA COMENZAR' : 'INICIAR CRÓNICA'}
             </motion.button>
           </div>
                {/* Level Rail - Refined Anime Style - Compacted */}
@@ -894,6 +819,96 @@ export default function StartScreen() {
             onClose={() => setScanning(false)}
             onError={(msg) => setError(msg)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Student Confirmation Modal */}
+      <AnimatePresence>
+        {pendingStudent && (
+          <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="w-full max-w-md bg-[#0e0904] border-2 border-orange-500/40 rounded-2xl sm:rounded-[2rem] p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-[0_0_80px_rgba(234,88,12,0.25)] relative overflow-hidden"
+            >
+              {/* Decorative top line accent */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[2px] bg-gradient-to-r from-transparent via-orange-500 to-transparent" />
+              
+              <div className="text-center space-y-1 sm:space-y-2">
+                <div className="mx-auto w-10 h-10 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
+                  <User size={18} />
+                </div>
+                <h3 className="text-white font-serif text-lg sm:text-2xl font-black uppercase tracking-tight">Confirmar Identidad</h3>
+                <p className="text-white/40 text-[8px] sm:text-[10px] tracking-widest font-black uppercase">¿Son correctos tus datos de alumno?</p>
+              </div>
+
+              {/* Data Grid */}
+              <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 space-y-3 font-mono text-[10px] sm:text-xs">
+                <div className="flex flex-col gap-0.5 pb-2.5 border-b border-white/5">
+                  <span className="text-orange-400 font-extrabold uppercase tracking-widest text-[7px] sm:text-[8px]">Nombre Completo</span>
+                  <span className="text-white font-bold font-serif text-sm sm:text-base">{pendingStudent.fullName}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-orange-400 font-extrabold uppercase tracking-widest text-[7px] sm:text-[8px]">Grado</span>
+                    <span className="text-white font-bold">{pendingStudent.gradoSolo}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-orange-400 font-extrabold uppercase tracking-widest text-[7px] sm:text-[8px]">Sección</span>
+                    <span className="text-white font-bold">{pendingStudent.seccionSolo || 'Única'}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-0.5 pt-2 border-t border-white/5">
+                  <span className="text-orange-400 font-extrabold uppercase tracking-widest text-[7px] sm:text-[8px]">Clave</span>
+                  <span className="text-white font-bold text-xs sm:text-sm">{pendingStudent.clave}</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingStudent(null);
+                    setVerifying(false);
+                  }}
+                  className="w-full py-2.5 sm:py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/80 hover:text-white font-serif text-xs sm:text-sm font-black uppercase tracking-wider transition-colors active:scale-95 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Save validated details to react state and store
+                    setValidatedStudent(pendingStudent);
+                    setPlayerInfo(
+                      pendingStudent.fullName,
+                      pendingStudent.userName,
+                      pendingStudent.gradeInfo,
+                      pendingStudent.nombre,
+                      pendingStudent.apellido,
+                      pendingStudent.gradoSolo,
+                      pendingStudent.seccionSolo
+                    );
+                    
+                    // Auto select character gender
+                    const sexo = pendingStudent.sexo || '';
+                    if (sexo === 'Femenino' || sexo === 'femenino' || sexo === 'F' || sexo === 'f') {
+                      setGender('female');
+                    } else {
+                      setGender('male');
+                    }
+
+                    setPendingStudent(null);
+                  }}
+                  className="w-full py-2.5 sm:py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-xl text-white font-serif text-xs sm:text-sm font-black uppercase tracking-wider shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all active:scale-95 cursor-pointer"
+                >
+                  Aceptar
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
