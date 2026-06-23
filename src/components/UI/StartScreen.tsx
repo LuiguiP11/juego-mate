@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy } from 'lucide-react';
+import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy, Upload, RefreshCw } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebase';
@@ -182,88 +182,118 @@ interface QRScannerModalProps {
 
 function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
   const [cameraError, setCameraError] = useState('');
+  const [cameras, setCameras] = useState<any[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'camera' | 'file'>('camera');
+  const [fileScanning, setFileScanning] = useState(false);
+  const [fileError, setFileError] = useState('');
+  
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
-
   const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  // Keep references to onSuccess and onError updated so we never restart scanner on parent render
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  });
+
+  // Load cameras once on mount
   useEffect(() => {
     let isMounted = true;
-
-    const startScanner = async () => {
-      // 1. Give the DOM and transitions 350ms to mount the container safely
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      if (!isMounted) return;
-
-      const element = document.getElementById("qr-reader");
-      if (!element) {
-        console.error("qr-reader element not found");
-        return;
-      }
-
+    
+    const loadCameras = async () => {
       try {
-        const scanner = new Html5Qrcode("qr-reader");
-        html5QrCodeRef.current = scanner;
-
-        const config = {
-          fps: 30, // High decoding speed
-          aspectRatio: undefined, // Native aspect ratio
-        };
-
-        console.log("Listing system cameras for standard focus lens selection...");
-        let cameras: any[] = [];
-        try {
-          cameras = await Html5Qrcode.getCameras();
-        } catch (listErr) {
-          console.warn("Failed to list cameras, trying environment flag directly", listErr);
-        }
-
-        if (cameras && cameras.length > 0) {
-          // Prioritize standard rear camera (excluding macro/wide/ultra lenses that cannot focus on QR codes)
-          let selectedCamera = cameras.find(c => {
+        const listedCameras = await Html5Qrcode.getCameras();
+        if (isMounted && listedCameras && listedCameras.length > 0) {
+          setCameras(listedCameras);
+          
+          // Select best initial camera
+          let selected = listedCameras.find(c => {
             const label = c.label.toLowerCase();
             const isRear = label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
             const isSpecialtyLens = label.includes('wide') || label.includes('ultra') || label.includes('macro') || label.includes('tele') || label.includes('depth') || label.includes('virtual') || label.includes('0');
             return isRear && !isSpecialtyLens;
           });
 
-          // Fallback to any rear camera
-          if (!selectedCamera) {
-            selectedCamera = cameras.find(c => {
+          if (!selected) {
+            selected = listedCameras.find(c => {
               const label = c.label.toLowerCase();
               return label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
             });
           }
 
-          // Fallback to the first available camera
-          if (!selectedCamera) {
-            selectedCamera = cameras[0];
+          if (!selected) {
+            selected = listedCameras[0];
           }
 
-          console.log("Recommended camera selected:", selectedCamera.label, "ID:", selectedCamera.id);
-          
+          setActiveCameraId(selected.id);
+        }
+      } catch (err) {
+        console.warn("Could not list cameras initially:", err);
+      }
+    };
+
+    loadCameras();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Main scanner lifecycle controlled by activeCameraId and activeTab
+  useEffect(() => {
+    if (activeTab !== 'camera') return;
+
+    let isMounted = true;
+    let scanner: Html5Qrcode | null = null;
+
+    const startScanner = async () => {
+      // 1. Give DOM 350ms to mount '#qr-reader' safely
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      if (!isMounted) return;
+
+      const element = document.getElementById("qr-reader");
+      if (!element) {
+        console.warn("qr-reader element not found in DOM yet");
+        return;
+      }
+
+      try {
+        scanner = new Html5Qrcode("qr-reader");
+        html5QrCodeRef.current = scanner;
+
+        const config = {
+          fps: 30, // Faster scanning speed
+          aspectRatio: undefined // Native aspect ratio prevents stretching
+        };
+
+        if (activeCameraId) {
+          console.log("Starting QR scanner with explicit camera:", activeCameraId);
           await scanner.start(
-            selectedCamera.id,
+            activeCameraId,
             config,
             (decodedText) => {
               if (isMounted) {
-                scanner.stop()
-                  .then(() => onSuccess(decodedText))
-                  .catch(() => onSuccess(decodedText));
+                scanner?.stop()
+                  .then(() => onSuccessRef.current(decodedText))
+                  .catch(() => onSuccessRef.current(decodedText));
               }
             },
-            () => {} // Silent search frame logging
+            () => {} // Silent search frame
           );
         } else {
-          // No listed cameras, attempt direct facingMode environment
-          console.log("No listed cameras, launching environment facingMode...");
+          console.log("Starting QR scanner with facingMode fallback...");
           await scanner.start(
             { facingMode: "environment" },
             config,
             (decodedText) => {
               if (isMounted) {
-                scanner.stop()
-                  .then(() => onSuccess(decodedText))
-                  .catch(() => onSuccess(decodedText));
+                scanner?.stop()
+                  .then(() => onSuccessRef.current(decodedText))
+                  .catch(() => onSuccessRef.current(decodedText));
               }
             },
             () => {}
@@ -272,32 +302,58 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       } catch (err: any) {
         console.error("Camera boot failed:", err);
         if (isMounted) {
-          const fallbackMessage = "No se pudo encender la cámara de forma automática. Asegúrate de otorgar permisos de cámara en tu navegador e ingresar en una pestaña dedicada.";
+          const fallbackMessage = "No se pudo encender la cámara de forma directa. Concede permisos de cámara al navegador o usa el lector de archivos abajo.";
           setCameraError(fallbackMessage);
-          onError(fallbackMessage);
         }
       }
     };
 
     startScanner();
 
-    // 3. React cleanup lifecycle
     return () => {
       isMounted = false;
-      const stopAndClearAll = async () => {
-        if (html5QrCodeRef.current) {
+      const stopScanner = async () => {
+        if (scanner) {
           try {
-            if (html5QrCodeRef.current.isScanning) {
-              await html5QrCodeRef.current.stop();
+            if (scanner.isScanning) {
+              await scanner.stop();
             }
           } catch (e) {
-            console.error("Error stopping scanner on lifecycle unmount:", e);
+            console.error("Error stopping scanner in cleanup:", e);
           }
         }
       };
-      stopAndClearAll();
+      stopScanner();
     };
-  }, [onSuccess, onError]);
+  }, [activeCameraId, activeTab]);
+
+  const handleSwitchCamera = async () => {
+    if (cameras.length <= 1) return;
+    const currentIndex = cameras.findIndex(c => c.id === activeCameraId);
+    const nextIndex = (currentIndex + 1) % cameras.length;
+    setActiveCameraId(cameras[nextIndex].id);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setFileScanning(true);
+    setFileError('');
+
+    try {
+      // Initialize a temporary file scanner on dummy div
+      const fileScanner = new Html5Qrcode("qr-file-detector-dummy");
+      const decodedText = await fileScanner.scanFile(file, false);
+      
+      onSuccessRef.current(decodedText);
+    } catch (err: any) {
+      console.error("File QR reading failed:", err);
+      setFileError("No se encontró ningún código QR en la imagen. Asegúrate de que la foto sea clara y esté bien enfocada.");
+    } finally {
+      setFileScanning(false);
+    }
+  };
 
   return (
     <motion.div 
@@ -306,49 +362,142 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-center p-4 backdrop-blur-xl shrink-0 overflow-y-auto"
     >
-      <div className="w-full max-w-sm text-center flex flex-col items-center mt-2">
+      <div id="qr-file-detector-dummy" className="hidden" />
+
+      <div className="w-full max-w-sm text-center flex flex-col items-center mt-2 space-y-1">
         <span className="text-[10px] text-orange-500 font-extrabold tracking-[0.3em] uppercase block">Lector de Credenciales QR</span>
         
-        {isInsideIframe && (
-          <div className="mt-2 bg-orange-500/10 border border-orange-500/30 p-2 sm:p-3 rounded-xl max-w-sm text-center">
+        {/* Navigation Tabs */}
+        <div className="flex gap-1.5 bg-white/5 border border-white/10 rounded-xl p-1 w-full max-w-[280px]">
+          <button
+            onClick={() => setActiveTab('camera')}
+            className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'camera' 
+                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
+                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            Usar Cámara
+          </button>
+          <button
+            onClick={() => setActiveTab('file')}
+            className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === 'file' 
+                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
+                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+          >
+            Subir Imagen
+          </button>
+        </div>
+
+        {isInsideIframe && activeTab === 'camera' && (
+          <div className="bg-orange-500/10 border border-orange-500/30 p-2 sm:p-3 rounded-xl max-w-sm text-center mt-2">
             <p className="text-orange-400 text-[10px] font-black leading-snug">
               ⚠️ Estás jugando dentro de la vista previa (iframe) de Google AI Studio.
             </p>
             <p className="text-white/60 text-[9px] mt-1 leading-relaxed">
-              Los navegadores bloquean la cámara dentro de vistas previas. Por favor, haz clic en el botón de <span className="text-orange-300 font-bold uppercase">&quot;Abrir en pestaña nueva&quot;</span> en la esquina superior derecha del navegador para jugar con tu cámara habilitada.
+              Los navegadores bloquean la cámara dentro de vistas previas. Por favor, haz clic en <span className="text-orange-300 font-bold uppercase">&quot;Abrir en pestaña nueva&quot;</span> en la esquina superior derecha o usa la pestaña <span className="text-orange-300 font-bold uppercase">&quot;Subir Imagen&quot;</span>.
             </p>
+          </div>
+        )}
+
+        {activeTab === 'camera' && cameras.length > 0 && !cameraError && (
+          <div className="mt-2 w-full max-w-[280px] bg-white/5 border border-white/10 rounded-xl p-1 px-2.5 flex items-center gap-2">
+            <Camera size={12} className="text-orange-500 shrink-0" />
+            <select
+              value={activeCameraId}
+              onChange={(e) => setActiveCameraId(e.target.value)}
+              className="w-full bg-transparent border-none text-white text-[10px] sm:text-xs font-mono font-bold outline-none cursor-pointer py-1.5"
+            >
+              {cameras.map((cam) => (
+                <option key={cam.id} value={cam.id} className="bg-[#0b0805] text-white font-sans text-xs">
+                  {cam.label || `Cámara ${cam.id.slice(0, 5)}`}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
 
-      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border-4 border-orange-500 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(249,115,22,0.3)] mt-5 bg-[#0a0502]">
-        {cameraError ? (
-          <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
-            <Camera size={32} className="text-neutral-600 mb-2" />
-            <p className="text-white/70 text-[10px] sm:text-xs font-semibold leading-relaxed">
-              No se pudo activar la cámara de forma directa.
-            </p>
-            <p className="text-neutral-500 text-[9px] mt-1 leading-relaxed max-w-[95%]">
-              {cameraError}
-            </p>
-            <span className="text-orange-400 text-[9px] font-bold mt-4 block">
-              Asegúrate de otorgar permisos de cámara en tu navegador e ingresa en una pestaña dedicada.
-            </span>
-          </div>
-        ) : (
-          <>
-            <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
-            {/* Custom High-Tech Sci-Fi Frame Brackets */}
-            <div className="qr-scanner-overlay">
-              <div className="qr-scanner-overlay-inner" />
+      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border-4 border-orange-500 rounded-3xl overflow-hidden shadow-[0_0_80px_rgba(249,115,22,0.3)] mt-5 bg-[#0a0502] flex items-center justify-center">
+        {activeTab === 'camera' ? (
+          cameraError ? (
+            <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
+              <Camera size={32} className="text-neutral-600 mb-2" />
+              <p className="text-white/70 text-[10px] sm:text-xs font-semibold leading-relaxed">
+                No se pudo activar la cámara de forma directa.
+              </p>
+              <p className="text-neutral-500 text-[9px] mt-1 leading-relaxed max-w-[95%]">
+                {cameraError}
+              </p>
+              <button 
+                onClick={() => setActiveTab('file')}
+                className="mt-4 px-4 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-[9px] font-black uppercase rounded-lg border border-orange-500/30 transition-all"
+              >
+                Cambiar a Subir Imagen
+              </button>
             </div>
-            {/* Animated Laser Scanning Line - Intensive Glowing Green sweeping from top (0%) to bottom (100%) */}
-            <div className="absolute inset-x-0 h-1.5 bg-[#22c55e] shadow-[0_0_15px_#22c55e,0_0_30px_#39ff14,0_0_50px_#39ff14] animate-qr-scanline pointer-events-none z-[25] top-0" />
-          </>
+          ) : (
+            <>
+              <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
+              {/* Custom High-Tech Sci-Fi Frame Brackets */}
+              <div className="qr-scanner-overlay">
+                <div className="qr-scanner-overlay-inner" />
+              </div>
+              {/* Animated Laser Scanning Line */}
+              <div className="absolute inset-x-0 h-1.5 bg-[#22c55e] shadow-[0_0_15px_#22c55e,0_0_30px_#39ff14,0_0_50px_#39ff14] animate-qr-scanline pointer-events-none z-[25] top-0" />
+            </>
+          )
+        ) : (
+          <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center space-y-4 bg-white/[0.01]">
+            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-orange-400">
+              <Upload size={24} />
+            </div>
+            <div className="space-y-1">
+              <p className="text-white font-bold text-xs sm:text-sm">Sube una foto de tu código QR</p>
+              <p className="text-white/40 text-[9px] sm:text-[10px] max-w-[240px] mx-auto leading-relaxed">
+                Toma una foto de tu credencial QR con tu celular o sube una captura de pantalla.
+              </p>
+            </div>
+
+            <label className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-lg transition-all active:scale-95 inline-flex items-center gap-2">
+              <Camera size={14} />
+              <span>Seleccionar Imagen</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleFileChange} 
+                disabled={fileScanning}
+                className="hidden" 
+              />
+            </label>
+
+            {fileScanning && (
+              <p className="text-yellow-400 text-[9px] sm:text-[10px] font-bold animate-pulse font-mono uppercase tracking-wider">
+                ⏳ Analizando imagen en busca de QR...
+              </p>
+            )}
+
+            {fileError && (
+              <p className="text-red-400 text-[9px] sm:text-[10px] font-bold max-w-[280px] leading-tight">
+                {fileError}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
-      <div className="mt-6 flex flex-col items-center gap-2.5 w-full max-w-sm">
+      <div className="mt-6 flex items-center justify-center gap-3 w-full max-w-sm">
+        {activeTab === 'camera' && cameras.length > 1 && !cameraError && (
+          <button
+            onClick={handleSwitchCamera}
+            className="px-5 py-3 bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 rounded-xl font-black uppercase tracking-[0.1em] text-[10px] transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <RefreshCw size={12} className="animate-spin-slow" />
+            <span>Rotar Cámara</span>
+          </button>
+        )}
         <button
           onClick={onClose}
           className="px-8 py-3 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all active:scale-95 cursor-pointer"
@@ -679,40 +828,42 @@ export default function StartScreen() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
-               <Trophy size={8} className="text-yellow-500" />
-               Tu Destino místico
-            </label>
-            <div className="grid grid-cols-2 gap-2 sm:gap-4">
-              <button
-                type="button"
-                onClick={() => setGender('male')}
-                className={`group relative p-1.5 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all flex flex-col items-center gap-1 active:scale-95 overflow-hidden cursor-pointer ${
-                  gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
-                }`}
-              >
-                <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-105' : 'bg-white/10'}`}>
-                   <Sword size={11} className="sm:size-4" />
-                </div>
-                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">Guerrero</span>
-                {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => setGender('female')}
-                className={`group relative p-1.5 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all flex flex-col items-center gap-1 active:scale-95 overflow-hidden cursor-pointer ${
-                  gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
-                }`}
-              >
-                <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-105' : 'bg-white/10'}`}>
-                   <Shield size={11} className="sm:size-4" />
-                </div>
-                <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">Mística</span>
-                {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
-               </button>
+          {validatedStudent && (
+            <div className="space-y-2">
+              <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+                 <Trophy size={8} className="text-yellow-500" />
+                 Tu Destino místico
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={() => setGender('male')}
+                  className={`group relative p-1.5 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all flex flex-col items-center gap-1 active:scale-95 overflow-hidden cursor-pointer ${
+                    gender === 'male' ? 'bg-orange-600/20 border-orange-500 text-white shadow-[0_0_40px_rgba(234,88,12,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                  }`}
+                >
+                  <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'male' ? 'bg-orange-500 text-white scale-105' : 'bg-white/10'}`}>
+                     <Sword size={11} className="sm:size-4" />
+                  </div>
+                  <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">Guerrero</span>
+                  {gender === 'male' && <div className="absolute inset-0 bg-gradient-to-t from-orange-500/20 to-transparent pointer-events-none" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGender('female')}
+                  className={`group relative p-1.5 sm:p-3 rounded-lg sm:rounded-xl border-2 transition-all flex flex-col items-center gap-1 active:scale-95 overflow-hidden cursor-pointer ${
+                    gender === 'female' ? 'bg-purple-600/20 border-purple-500 text-white shadow-[0_0_40px_rgba(147,51,234,0.2)]' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                  }`}
+                >
+                  <div className={`w-6 h-6 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all ${gender === 'female' ? 'bg-purple-500 text-white scale-105' : 'bg-white/10'}`}>
+                     <Shield size={11} className="sm:size-4" />
+                  </div>
+                  <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em]">Mística</span>
+                  {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
+                 </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="pt-1 sm:pt-2 flex flex-col gap-2">
             <motion.button
