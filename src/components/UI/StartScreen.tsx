@@ -592,16 +592,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
             </div>
           ) : (
             <>
-              <div id="qr-reader" className="w-full h-full" style={{ position: 'relative' }} />
-              {/* Custom High-Tech Sci-Fi Frame Brackets */}
-              <div className="absolute inset-0 border-2 border-orange-500/10 pointer-events-none z-[25] m-4 rounded-xl flex items-center justify-center">
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-orange-500 rounded-tl-md" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-orange-500 rounded-tr-md" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-orange-500 rounded-bl-md" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-orange-500 rounded-br-md" />
-              </div>
-              {/* Animated Laser Scanning Line */}
-              <div className="absolute inset-x-0 h-1 bg-[#22c55e] shadow-[0_0_10px_#22c55e,0_0_20px_#39ff14] animate-qr-scanline pointer-events-none z-[25] top-0" />
+              <div id="qr-reader" className="w-full h-full" />
             </>
           )
         ) : (
