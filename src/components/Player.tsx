@@ -126,8 +126,7 @@ export default function Player() {
             // Player is falling!
             velocity.current.y -= 0.01;
             if (position.current.y < -5) {
-                // Respawn and lose life
-                useGameStore.getState().solvePuzzle(false); // Wrong answer / Death logic
+                // Respawn safely back on path without losing a life (keeps game fun and bug-free)
                 position.current.set(0, 5, position.current.z + 5); // Respawn slightly back and high
                 velocity.current.set(0,0,0);
             }
@@ -164,41 +163,9 @@ export default function Player() {
     }
 
     // --- TRAP COLLISIONS ---
+    // Traps are now purely decorative/visual ornaments ('de adorno') to prevent frustrating mobile controls or accidental deaths.
+    // They still render and animate beautifully in the 3D world but have no collision impact on the player.
     const currentLevelIdx = useGameStore.getState().currentLevel;
-    if (currentLevelIdx >= 1) {
-        const corridorLen = 60; // Matches World.tsx corridorLen
-        const trapsCount = 2 + currentLevelIdx;
-        for(let i = 0; i < trapsCount; i++) {
-            const trapZ = -(i + 1) * (corridorLen / (trapsCount + 1)) - 5;
-            const dist = Math.sqrt(Math.pow(position.current.x, 2) + Math.pow(position.current.z - trapZ, 2));
-            
-            // Basic proximity check for simplified collisions
-            if (dist < 1.2) {
-                const levelMetadata = useGameStore.getState().currentLevel !== null ? LEVELS[currentLevelIdx] : null;
-                const isWaterLevel = levelMetadata?.theme === 'water';
-                const isCaveLevel = levelMetadata?.theme === 'cave';
-                const isPendulum = !isAbyss && !isWaterLevel && !isCaveLevel;
-                
-                let hit = false;
-                if (isPendulum) {
-                    // Check if pendulum blade is in center
-                    const swing = Math.sin(time * 2) * 1.2;
-                    if (Math.abs(swing) < 0.3) hit = true;
-                } else {
-                    // Spikes check
-                    const cycle = (Math.sin(time * 3) + 1) / 2;
-                    if (cycle > 0.6) hit = true;
-                }
-
-                if (hit) {
-                    // Push back and damage
-                    useGameStore.getState().solvePuzzle(false);
-                    position.current.z += 2;
-                    velocity.current.set(0, 0, 0.1);
-                }
-            }
-        }
-    }
     
     if (useGameStore.getState().nearGateIndex !== foundGate) {
         useGameStore.getState().setNearGate(foundGate);
