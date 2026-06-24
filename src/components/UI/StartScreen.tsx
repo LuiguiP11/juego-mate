@@ -197,12 +197,6 @@ const findStudentByCandidates = async (candidates: string[]) => {
   try {
     const snapshot = await getDocs(collection(db, 'alumnos'));
     console.log(`Diagnostic: Se cargaron ${snapshot.size} alumnos de la base de datos.`);
-    
-    // Log the database content to console for diagnostic purposes
-    snapshot.docs.forEach(d => {
-      const data = d.data();
-      console.log(`- Alumno ID: "${d.id}", usuario: "${data.usuario || data.Usuario || ''}", nombreCompleto: "${data.nombreCompleto || data.NombreCompleto || ''}", nombre: "${data.nombre || data.Nombre || ''} ${data.apellido || data.Apellido || ''}"`);
-    });
 
     // Helper to normalize strings for robust comparison (lowercase, alphanumeric only)
     const normalize = (s: string) => s.toLowerCase()
@@ -381,7 +375,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         };
 
         const config = {
-          fps: 15, // Smooth stable scanning frame rate
+          fps: 30, // Much faster frame rate for immediate QR code detection
           qrbox: qrBoxFunction,
           aspectRatio: undefined // Native aspect ratio prevents stretching
         };
@@ -680,6 +674,7 @@ export default function StartScreen() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [scannedText, setScannedText] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(0);
 
   // Keep track of the currently validated student in react state to manage form validation state in two steps
@@ -734,6 +729,7 @@ export default function StartScreen() {
     // Set temporary username in name state while verifying
     const primaryUser = candidates.find(c => c === c.toLowerCase()) || candidates[0] || decodedText.trim();
     setName(primaryUser);
+    setScannedText(primaryUser);
 
     setVerifying(true);
     setError('');
@@ -1122,6 +1118,30 @@ export default function StartScreen() {
             onClose={() => setScanning(false)}
             onError={(msg) => setError(msg)}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Student Verifying Overlay */}
+      <AnimatePresence>
+        {verifying && (
+          <div className="fixed inset-0 z-[350] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="flex flex-col items-center space-y-4 max-w-sm text-center"
+            >
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-orange-500/10 border-t-orange-500 animate-spin" />
+                <div className="absolute inset-2 rounded-full border-4 border-emerald-500/10 border-b-emerald-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-white font-serif text-sm sm:text-base font-black uppercase tracking-wider">Buscando Registro</h4>
+                <p className="text-orange-400 font-mono text-[10px] sm:text-xs">Validando usuario: "{scannedText || name}"</p>
+                <p className="text-white/40 text-[8px] sm:text-[9px] uppercase tracking-widest font-bold">Base de datos: "mate-experimental"</p>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

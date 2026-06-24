@@ -239,10 +239,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         const level = LEVELS[currentLevel];
         get().addInventory(level.treasure);
         // Add 2 points per level won
-        set((state) => ({ totalPoints: state.totalPoints + 2 }));
+        const newTotalPoints = get().totalPoints + 2;
+        set({ totalPoints: newTotalPoints });
         
-        // Trigger automated saving to Firebase
-        get().saveScoreToFirebase(currentLevel, 2.0);
+        // Trigger automated saving to Firebase with the cumulative total points
+        get().saveScoreToFirebase(currentLevel, newTotalPoints);
       }
     } else {
       const newLives = get().lives - 1;
@@ -320,32 +321,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const level = LEVELS[levelIndex];
     if (!level) return false;
-    const levelName = level.name;
 
-    // Map levelIndex to clean ID-friendly names & user-friendly display names
-    const levelActivityNames: Record<number, string> = {
-      0: "juego_enteros",
-      1: "juego_algebra",
-      2: "juego_fracciones",
-      3: "juego_potencias",
-      4: "juego_polinomios"
-    };
-    const prettyActivityNames: Record<number, string> = {
-      0: "Juego de Enteros",
-      1: "Juego de Álgebra",
-      2: "Juego de Fracciones",
-      3: "Juego de Potencias",
-      4: "Juego de Polinomios"
-    };
+    // Requirement: The activity must appear as "Tarea 3: Juego Algebra" in the T2 section
+    const cleanUnidad = "t2"; // Explicitly save under 't2' trimester
+    const cleanActividadId = "juego_algebra"; // Matches Tarea 3: Juego Algebra
 
-    const cleanUnidad = (playerTrimestre || 'T2').toLowerCase().trim();
-    const cleanActividadId = levelActivityNames[levelIndex] || "juego_mate";
-    const prettyActividad = prettyActivityNames[levelIndex] || `Juego de ${levelName}`;
-
-    // Requirement 5: Document ID = [usuario]_[unidad]_[actividad] in lowercase, without spaces
+    // Document ID = [usuario]_[unidad]_[actividad] in lowercase, without spaces
     const docId = `${playerUser.toLowerCase().trim()}_${cleanUnidad}_${cleanActividadId}`;
 
-    // Requirement 6: Date in YYYY-MM-DD
+    // Date in YYYY-MM-DD
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -361,8 +345,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         apellido: playerApellido,
         grado: playerGradoSolo,
         seccion: playerSeccionSolo,
-        actividad: prettyActividad,
-        punteo: 100.0, // Nota obtenida, decimal de 0 a 100 (complete level = 100.0)
+        actividad: "Tarea 3: Juego Algebra",
+        punteo: scoreValue, // Reflection of total cumulative points (2, 4, 6, 8, or 10)
         unidad: cleanUnidad,
         trimestre: cleanUnidad.toUpperCase(),
         fecha: formattedDate,

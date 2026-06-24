@@ -164,14 +164,16 @@ export default function Player() {
     }
 
     // --- TRAP COLLISIONS ---
-    if (useGameStore.getState().currentLevel >= 1) {
-        for(let i = 0; i < 3; i++) {
-            const trapZ = -(i + 1) * 15 - 5;
+    const currentLevelIdx = useGameStore.getState().currentLevel;
+    if (currentLevelIdx >= 1) {
+        const corridorLen = 60; // Matches World.tsx corridorLen
+        const trapsCount = 2 + currentLevelIdx;
+        for(let i = 0; i < trapsCount; i++) {
+            const trapZ = -(i + 1) * (corridorLen / (trapsCount + 1)) - 5;
             const dist = Math.sqrt(Math.pow(position.current.x, 2) + Math.pow(position.current.z - trapZ, 2));
             
             // Basic proximity check for simplified collisions
             if (dist < 1.2) {
-                const currentLevelIdx = useGameStore.getState().currentLevel;
                 const levelMetadata = useGameStore.getState().currentLevel !== null ? LEVELS[currentLevelIdx] : null;
                 const isWaterLevel = levelMetadata?.theme === 'water';
                 const isCaveLevel = levelMetadata?.theme === 'cave';

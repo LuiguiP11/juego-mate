@@ -31,12 +31,10 @@ function Torch({ position }: { position: [number, number, number] }) {
         <cylinderGeometry args={[0.04, 0.04, 0.5]} />
         <meshPhongMaterial color="#422" />
       </mesh>
-      {/* Flame Glow */}
+      {/* Flame Glow - Optimized to completely omit pointLight on low quality for mobile devices */}
       {graphicsQuality === 'high' ? (
         <pointLight ref={lightRef} intensity={3} distance={15} color="#ff8822" position={[0, 0.4, 0]} castShadow={false} />
-      ) : (
-        <pointLight intensity={1.5} distance={6} color="#ff8822" position={[0, 0.4, 0]} />
-      )}
+      ) : null}
       <mesh position={[0, 0.4, 0]}>
         <sphereGeometry args={[0.08, 8, 8]} />
         <meshBasicMaterial color="#ffaa44" />
@@ -511,7 +509,7 @@ export default function World() {
   const isCrystal = level.theme === 'crystal';
 
   // Corridor settings
-  const corridorLen = 45;
+  const corridorLen = 60;
   const corridorW = 4.2;
   const gateSpacing = 8;
   
@@ -609,7 +607,7 @@ export default function World() {
       {props.map((p, i) => <Prop key={i} type={p.type} position={p.pos} />)}
 
       {/* Corridor Structure */}
-      {[...Array(12)].map((_, i) => (
+      {[...Array(15)].map((_, i) => (
         <group key={i} position={[0, 0, -i * 5]}>
             {/* Arches or regular columns */}
             {isLibrary ? (
