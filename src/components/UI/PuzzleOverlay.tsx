@@ -3,21 +3,49 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useGameStore, LEVELS } from '../../store';
 import { Check, X } from 'lucide-react';
 
 export default function PuzzleOverlay() {
-  const { currentLevel, score, solvePuzzle, setPhase } = useGameStore();
+  const { currentLevel, score, solvePuzzle, setPhase, activePuzzles } = useGameStore();
   const level = LEVELS[currentLevel];
   const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   
-  // Use the puzzle according to current progress (score)
-  const puzzle = level.puzzles[Math.min(score, level.puzzles.length - 1)]; 
+  // Use the puzzle according to current progress (score) from the dynamically selected active puzzles
+  const puzzle = activePuzzles && activePuzzles.length > 0
+    ? activePuzzles[Math.min(score, activePuzzles.length - 1)]
+    : level.puzzles[Math.min(score, level.puzzles.length - 1)]; 
   
   const [result, setResult] = useState<'none' | 'correct' | 'wrong'>('none');
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState(150); // 2 minutes and 30 seconds
+
+  useEffect(() => {
+    if (result !== 'none') return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setResult('wrong');
+          
+          // Timeout: considered wrong answer
+          setTimeout(() => {
+            solvePuzzle(false);
+            if (useGameStore.getState().lives > 0) {
+              setPhase('playing');
+            }
+          }, 1200);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [result, solvePuzzle, setPhase]);
 
   const handleAnswer = (ans: string, idx: number) => {
     if (result !== 'none') return;
@@ -69,14 +97,41 @@ export default function PuzzleOverlay() {
             </h2>
           </header>
 
+          {/* Timer Display */}
+          <div className="w-full flex flex-col items-center space-y-1 sm:space-y-2 px-2">
+            <div className="flex items-center gap-1.5 font-mono text-xs sm:text-base font-black">
+              <span className={timeLeft <= 30 ? "text-red-500 animate-pulse font-bold" : "text-orange-400"}>
+                ⏱️ {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+              </span>
+              {timeLeft <= 30 && (
+                <span className="text-[10px] sm:text-xs text-red-500 font-bold uppercase tracking-wider animate-pulse">
+                  ¡Rápido!
+                </span>
+              )}
+            </div>
+            {/* Visual Progress Bar */}
+            <div className="w-full h-1.5 sm:h-2.5 bg-white/5 rounded-full overflow-hidden relative border border-white/10">
+              <div 
+                className={`h-full rounded-full transition-all duration-1000 ${
+                  timeLeft <= 30 
+                    ? "bg-gradient-to-r from-red-500 to-red-600 shadow-[0_0_10px_#ef4444]" 
+                    : "bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_10px_#f97316]"
+                }`}
+                style={{ width: `${(timeLeft / 150) * 100}%` }}
+              />
+            </div>
+          </div>
+
           <div className="bg-white/[0.03] border border-white/10 rounded-lg sm:rounded-2xl p-3 sm:p-6 w-full flex items-center justify-center shadow-inner group overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <motion.span 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              className="text-base sm:text-2xl font-mono font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+              className={`text-base sm:text-2xl font-mono font-black text-center ${
+                timeLeft === 0 ? "text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.6)] animate-pulse" : "text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+              }`}
             >
-              {puzzle.q}
+              {timeLeft === 0 ? "¡TIEMPO AGOTADO!" : puzzle.q}
             </motion.span>
           </div>
 
