@@ -601,15 +601,15 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
               <Upload size={24} />
             </div>
             <div className="space-y-1">
-              <p className="text-white font-bold text-xs sm:text-sm">Sube una foto de tu código QR</p>
+              <p className="text-white font-bold text-xs sm:text-sm">Sube tu Credencial Sagrada</p>
               <p className="text-white/40 text-[9px] sm:text-[10px] max-w-[240px] mx-auto leading-relaxed">
-                Toma una foto de tu credencial QR con tu celular o sube una captura de pantalla.
+                ¿Tu cámara tiene candado? Sube una foto clara o captura de tu código QR de alumno para abrir las puertas del templo.
               </p>
             </div>
 
-            <label className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-lg transition-all active:scale-95 inline-flex items-center gap-2">
-              <Camera size={14} />
-              <span>Seleccionar Imagen</span>
+            <label className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-lg transition-all active:scale-95 inline-flex items-center gap-2 border border-orange-500/30">
+              <Upload size={14} className="text-white" />
+              <span>Cargar Pergamino QR</span>
               <input 
                 type="file" 
                 accept="image/*" 
@@ -655,6 +655,14 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
   );
 }
 
+const LEVEL_LORE = [
+  "Descubre el misterio de las potencias en la cueva sagrada de Jhiro.",
+  "Calcula el poder de la variable oculta entre las cascadas de este valle sagrado.",
+  "Domina el arte de reemplazar múltiples incógnitas en la biblioteca perdida.",
+  "Agrupa clanes de letras afines en el místico abismo de la reducción.",
+  "Destruye las barreras de paréntesis y llaves en el santuario supremo."
+];
+
 export default function StartScreen() {
   const { 
     playerName, 
@@ -667,7 +675,9 @@ export default function StartScreen() {
     playerActividad,
     playerTrimestre,
     setPlayerActividad,
-    setPlayerTrimestre
+    setPlayerTrimestre,
+    muted,
+    toggleMute
   } = useGameStore();
   
   const [name, setName] = useState(playerName);
@@ -977,8 +987,8 @@ export default function StartScreen() {
           </div>
 
           {validatedStudent && (
-            <div className="space-y-2">
-              <label className="text-[7px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
+            <div className="space-y-2.5">
+              <label className="text-[7px] sm:text-[9px] uppercase tracking-[0.3em] text-white/50 font-black flex items-center gap-1.5">
                  <Trophy size={8} className="text-yellow-500" />
                  Tu Destino místico
               </label>
@@ -1010,6 +1020,67 @@ export default function StartScreen() {
                   {gender === 'female' && <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 to-transparent pointer-events-none" />}
                  </button>
               </div>
+
+              {/* Fictional RPG Stats Card for preteen immersion */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-[#0b0805]/90 border border-white/5 rounded-xl p-2.5 space-y-2 text-[8px] sm:text-[10px] font-mono leading-tight shadow-lg"
+              >
+                <div className="flex justify-between items-center text-orange-400 font-bold">
+                  <span>ATRIBUTOS SAGRADOS:</span>
+                  <span className="uppercase text-[6px] sm:text-[7px] px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 animate-pulse text-yellow-500 font-black">
+                    {gender === 'male' ? '💥 Especialista en Potencias' : '🔮 Inmune a Ley de Signos'}
+                  </span>
+                </div>
+                
+                <div className="space-y-1 text-white/70">
+                  <div>
+                    <div className="flex justify-between text-[7px] sm:text-[9px] mb-0.5">
+                      <span>Poder de Álgebra</span>
+                      <span>{gender === 'male' ? '95%' : '80%'}</span>
+                    </div>
+                    <div className="w-full bg-white/5 h-1 rounded overflow-hidden">
+                      <div 
+                        className={`h-full ${gender === 'male' ? 'bg-orange-500' : 'bg-purple-500'}`} 
+                        style={{ width: gender === 'male' ? '95%' : '80%' }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[7px] sm:text-[9px] mb-0.5">
+                      <span>Concentración Mental</span>
+                      <span>{gender === 'male' ? '70%' : '100%'}</span>
+                    </div>
+                    <div className="w-full bg-white/5 h-1 rounded overflow-hidden">
+                      <div 
+                        className={`h-full ${gender === 'male' ? 'bg-orange-500' : 'bg-purple-500'}`} 
+                        style={{ width: gender === 'male' ? '70%' : '100%' }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[7px] sm:text-[9px] mb-0.5">
+                      <span>Agilidad del Héroe</span>
+                      <span>{gender === 'male' ? '85%' : '90%'}</span>
+                    </div>
+                    <div className="w-full bg-white/5 h-1 rounded overflow-hidden">
+                      <div 
+                        className={`h-full ${gender === 'male' ? 'bg-orange-500' : 'bg-purple-500'}`} 
+                        style={{ width: gender === 'male' ? '85%' : '90%' }} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[7.5px] text-white/40 italic leading-normal text-center pt-1 border-t border-white/5">
+                  {gender === 'male' 
+                    ? '"El Guerrero resuelve exponentes aplicando la fuerza física de su espada."' 
+                    : '"La Mística domina los paréntesis con la calma de su espíritu sagrado."'}
+                </p>
+              </motion.div>
             </div>
           )}
 
@@ -1036,6 +1107,18 @@ export default function StartScreen() {
               </div>
               {verifying ? 'VERIFICANDO...' : !validatedStudent ? 'ESCANEA TU QR PARA COMENZAR' : 'INICIAR CRÓNICA'}
             </motion.button>
+
+            {/* Sound & Controls Guide Widget */}
+            <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 text-[8px] sm:text-[10px] font-mono text-white/40">
+              <button
+                type="button"
+                onClick={toggleMute}
+                className="flex items-center gap-1.5 hover:text-orange-400 text-white/50 transition-colors cursor-pointer select-none py-1 px-2 bg-white/5 rounded-lg border border-white/5 hover:border-orange-500/30 font-bold"
+              >
+                <span>{muted ? '🔇 Música Desactivada' : '🔊 Música Activa'}</span>
+              </button>
+              <span className="text-[7.5px] text-white/25 uppercase font-bold tracking-widest">Templo de los Sabios v1.4</span>
+            </div>
           </div>
                {/* Level Rail - Refined Anime Style - Compacted */}
         <div className="w-full max-w-5xl mt-5 sm:mt-12 relative px-4 sm:px-8">
@@ -1081,6 +1164,12 @@ export default function StartScreen() {
                        <span className="text-[7px] text-orange-500 font-black tracking-[0.3em] uppercase">Nivel 0{i + 1}</span>
                     </div>
                     <h4 className="text-white font-serif text-xs xs:text-sm sm:text-xl font-black leading-none uppercase tracking-tighter">{lv.name}</h4>
+                    
+                    {/* Level lore description for student immersion */}
+                    <p className="text-orange-200/80 text-[7.5px] sm:text-[10px] leading-snug tracking-normal italic font-medium my-0.5 line-clamp-2">
+                      "{LEVEL_LORE[i] || 'Una misteriosa expedición te espera.'}"
+                    </p>
+
                     <p className="text-white/40 text-[7px] font-bold tracking-widest uppercase mb-0.5">{lv.theme}</p>
                     
                     <div className="flex items-center justify-between mt-0.5 pt-2 border-t border-white/5">
