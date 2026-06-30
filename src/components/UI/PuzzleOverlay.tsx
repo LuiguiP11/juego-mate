@@ -18,9 +18,10 @@ export default function PuzzleOverlay() {
     ? activePuzzles[Math.min(score, activePuzzles.length - 1)]
     : level.puzzles[Math.min(score, level.puzzles.length - 1)]; 
   
+  const maxTime = currentLevel === 4 ? 240 : 150; // 4 minutes (240s) for level 5, 2.5 minutes (150s) for others
   const [result, setResult] = useState<'none' | 'correct' | 'wrong'>('none');
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState(150); // 2 minutes and 30 seconds
+  const [timeLeft, setTimeLeft] = useState(maxTime);
 
   useEffect(() => {
     if (result !== 'none') return;
@@ -34,9 +35,6 @@ export default function PuzzleOverlay() {
           // Timeout: considered wrong answer
           setTimeout(() => {
             solvePuzzle(false);
-            if (useGameStore.getState().lives > 0) {
-              setPhase('playing');
-            }
           }, 1200);
           return 0;
         }
@@ -45,7 +43,7 @@ export default function PuzzleOverlay() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [result, solvePuzzle, setPhase]);
+  }, [result, solvePuzzle]);
 
   const handleAnswer = (ans: string, idx: number) => {
     if (result !== 'none') return;
@@ -57,9 +55,6 @@ export default function PuzzleOverlay() {
     // Quickened response timeout slightly from 1200ms to 900ms to feel snappier
     setTimeout(() => {
       solvePuzzle(isCorrect);
-      if (isCorrect || useGameStore.getState().lives > 0) {
-        setPhase('playing');
-      }
     }, 900);
   };
 
@@ -117,7 +112,7 @@ export default function PuzzleOverlay() {
                     ? "bg-gradient-to-r from-red-500 to-red-600 shadow-[0_0_10px_#ef4444]" 
                     : "bg-gradient-to-r from-orange-500 to-amber-500 shadow-[0_0_10px_#f97316]"
                 }`}
-                style={{ width: `${(timeLeft / 150) * 100}%` }}
+                style={{ width: `${(timeLeft / maxTime) * 100}%` }}
               />
             </div>
           </div>

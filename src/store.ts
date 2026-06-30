@@ -143,31 +143,31 @@ export const EXERCISE_POOLS: Puzzle[][] = [
   ],
   // Nivel 3: Sustitución en expresiones algebraicas (Dos o más variables, positivas y negativas)
   [
-    { q: "Si a = -2 y b = 3, calcular a² + 2b", a: ["10", "8", "6", "12"], c: "10" },
-    { q: "Si x = 2 y y = -1, calcular 3x + y", a: ["5", "7", "6", "4"], c: "5" },
-    { q: "Si a = 3 y b = 2, calcular 2a - b²", a: ["2", "4", "0", "6"], c: "2" },
-    { q: "Si m = -1 y n = -2, calcular m + n", a: ["-3", "3", "-1", "1"], c: "-3" },
-    { q: "Si x = 4 y y = 2, calcular x² - y²", a: ["12", "16", "8", "14"], c: "12" },
-    { q: "Si a = 5 y b = -3, calcular a + b", a: ["2", "-2", "8", "-8"], c: "2" },
-    { q: "Si x = -3 y y = 2, calcular x² + y²", a: ["13", "5", "-5", "25"], c: "13" },
-    { q: "Si m = 2 y n = 5, calcular 3m + 2n", a: ["16", "11", "21", "13"], c: "16" },
-    { q: "Si a = 1 y b = -4, calcular ab + 5", a: ["1", "-1", "9", "-9"], c: "1" },
-    { q: "Si x = -2 y y = -3, calcular xy", a: ["6", "-6", "5", "-5"], c: "6" },
-    { q: "Si a = 3 y b = -1, calcular a²b", a: ["-9", "9", "-6", "6"], c: "-9" },
-    { q: "Si m = 4 y n = -2, calcular m/n + 3", a: ["1", "-1", "5", "-5"], c: "1" },
-    { q: "Si x = 3 y y = 3, calcular 2x - 2y", a: ["0", "6", "-6", "12"], c: "0" },
-    { q: "Si a = -5 y b = 2, calcular 2a + 3b", a: ["-4", "4", "-16", "16"], c: "-4" },
-    { q: "Si x = -1 y y = -1, calcular x² - y²", a: ["0", "2", "-2", "1"], c: "0" },
-    { q: "Si a = 2 y b = 4, calcular 3a - b", a: ["2", "10", "6", "4"], c: "2" },
-    { q: "Si m = -3 y n = 3, calcular m + n", a: ["0", "6", "-6", "9"], c: "0" },
-    { q: "Si x = 5 y y = -2, calcular xy + 10", a: ["0", "20", "-20", "10"], c: "0" },
-    { q: "Si a = -2 y b = -2, calcular a² + b²", a: ["8", "-8", "4", "0"], c: "8" },
-    { q: "Si x = 3 y y = -1, calcular x - 2y", a: ["5", "1", "4", "2"], c: "5" },
-    { q: "Si m = 1 y n = 10, calcular 5m + n", a: ["15", "11", "50", "5"], c: "15" },
-    { q: "Si a = -4 y b = 1, calcular a/2 + 3b", a: ["1", "-1", "5", "-5"], c: "1" },
-    { q: "Si x = 2 y y = 3, calcular x³ - y", a: ["5", "3", "6", "1"], c: "5" },
-    { q: "Si a = -3 y b = -2, calcular a - b", a: ["-1", "1", "-5", "5"], c: "-1" },
-    { q: "Si m = 2 y n = -3, calcular m² + n", a: ["1", "7", "-2", "4"], c: "1" }
+    { q: "Si a = -2; b = 3, calcular a² + 2b", a: ["10", "8", "6", "12"], c: "10" },
+    { q: "Si x = 2; y = -1, calcular 3x + y", a: ["5", "7", "6", "4"], c: "5" },
+    { q: "Si a = 3; b = 2, calcular 2a - b²", a: ["2", "4", "0", "6"], c: "2" },
+    { q: "Si m = -1; n = -2, calcular m + n", a: ["-3", "3", "-1", "1"], c: "-3" },
+    { q: "Si x = 4; y = 2, calcular x² - y²", a: ["12", "16", "8", "14"], c: "12" },
+    { q: "Si a = 5; b = -3, calcular a + b", a: ["2", "-2", "8", "-8"], c: "2" },
+    { q: "Si x = -3; y = 2, calcular x² + y²", a: ["13", "5", "-5", "25"], c: "13" },
+    { q: "Si m = 2; n = 5, calcular 3m + 2n", a: ["16", "11", "21", "13"], c: "16" },
+    { q: "Si a = 1; b = -4, calcular ab + 5", a: ["1", "-1", "9", "-9"], c: "1" },
+    { q: "Si x = -2; y = -3, calcular xy", a: ["6", "-6", "5", "-5"], c: "6" },
+    { q: "Si a = 3; b = -1, calcular a²b", a: ["-9", "9", "-6", "6"], c: "-9" },
+    { q: "Si m = 4; n = -2, calcular m/n + 3", a: ["1", "-1", "5", "-5"], c: "1" },
+    { q: "Si x = 3; y = 3, calcular 2x - 2y", a: ["0", "6", "-6", "12"], c: "0" },
+    { q: "Si a = -5; b = 2, calcular 2a + 3b", a: ["-4", "4", "-16", "16"], c: "-4" },
+    { q: "Si x = -1; y = -1, calcular x² - y²", a: ["0", "2", "-2", "1"], c: "0" },
+    { q: "Si a = 2; b = 4, calcular 3a - b", a: ["2", "10", "6", "4"], c: "2" },
+    { q: "Si m = -3; n = 3, calcular m + n", a: ["0", "6", "-6", "9"], c: "0" },
+    { q: "Si x = 5; y = -2, calcular xy + 10", a: ["0", "20", "-20", "10"], c: "0" },
+    { q: "Si a = -2; b = -2, calcular a² + b²", a: ["8", "-8", "4", "0"], c: "8" },
+    { q: "Si x = 3; y = -1, calcular x - 2y", a: ["5", "1", "4", "2"], c: "5" },
+    { q: "Si m = 1; n = 10, calcular 5m + n", a: ["15", "11", "50", "5"], c: "15" },
+    { q: "Si a = -4; b = 1, calcular a/2 + 3b", a: ["1", "-1", "5", "-5"], c: "1" },
+    { q: "Si x = 2; y = 3, calcular x³ - y", a: ["5", "3", "6", "1"], c: "5" },
+    { q: "Si a = -3; b = -2, calcular a - b", a: ["-1", "1", "-5", "5"], c: "-1" },
+    { q: "Si m = 2; n = -3, calcular m² + n", a: ["1", "7", "-2", "4"], c: "1" }
   ],
   // Nivel 4: Reducción de términos semejantes / clanes de términos (Agrupar términos semejantes)
   [
@@ -362,23 +362,25 @@ export const useGameStore = create<GameState>((set, get) => ({
   solvePuzzle: (correct) => {
     if (correct) {
       const newScore = get().score + 1;
-      set({ score: newScore });
+      const currentLevel = get().currentLevel;
       if (newScore === 5) {
-        const currentLevel = get().currentLevel;
         const level = LEVELS[currentLevel];
         get().addInventory(level.treasure);
         // Add 2 points per level won
         const newTotalPoints = get().totalPoints + 2;
-        set({ totalPoints: newTotalPoints });
+        set({ score: newScore, totalPoints: newTotalPoints, phase: 'playing' });
         
         // Trigger automated saving to Firebase with the cumulative total points
         get().saveScoreToFirebase(currentLevel, newTotalPoints);
+      } else {
+        set({ score: newScore, phase: 'playing' });
       }
     } else {
       const newLives = get().lives - 1;
-      set({ lives: newLives });
       if (newLives <= 0) {
-        set({ phase: 'gameover' });
+        set({ lives: 0, phase: 'gameover' });
+      } else {
+        set({ lives: newLives, phase: 'playing' });
       }
     }
   },
