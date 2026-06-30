@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { db } from './firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-export type GamePhase = 'start' | 'intro' | 'playing' | 'puzzle' | 'victory' | 'gameover' | 'certificate';
+export type GamePhase = 'start' | 'intro' | 'playing' | 'puzzle' | 'victory' | 'gameover' | 'certificate' | 'practice';
 
 export interface Puzzle {
   q: string;
@@ -74,6 +74,7 @@ interface GameState {
   setMobileControl: (control: 'forward' | 'backward' | 'left' | 'right' | 'jump', val: boolean) => void;
   solvePuzzle: (correct: boolean) => void;
   startLevel: (levelIndex: number) => void;
+  startPractice: (levelIndex: number) => void;
   resetGame: () => void;
   nextLevel: () => void;
   unlockNextLevel: () => void;
@@ -89,10 +90,10 @@ export const EXERCISE_POOLS: Puzzle[][] = [
   [
     { q: "2² =", a: ["4", "2", "6", "8"], c: "4" },
     { q: "(-2)² =", a: ["4", "-4", "2", "-2"], c: "4" },
-    { q: "-2² =", a: ["-4", "4", "-2", "2"], c: "-4" },
+    { q: "-2² =", a: ["-4", "4", "-2", "2"], c: "4" },
     { q: "3² =", a: ["9", "6", "5", "12"], c: "9" },
     { q: "(-3)² =", a: ["9", "-9", "6", "-6"], c: "9" },
-    { q: "-3² =", a: ["-9", "9", "-6", "6"], c: "-9" },
+    { q: "-3² =", a: ["-9", "9", "-6", "6"], c: "9" },
     { q: "2³ =", a: ["8", "6", "16", "5"], c: "8" },
     { q: "(-2)³ =", a: ["-8", "8", "-6", "6"], c: "-8" },
     { q: "-2³ =", a: ["-8", "8", "-6", "6"], c: "-8" },
@@ -101,16 +102,16 @@ export const EXERCISE_POOLS: Puzzle[][] = [
     { q: "-3³ =", a: ["-27", "27", "-9", "9"], c: "-27" },
     { q: "4² =", a: ["16", "8", "12", "20"], c: "16" },
     { q: "(-4)² =", a: ["16", "-16", "8", "-8"], c: "16" },
-    { q: "-4² =", a: ["-16", "16", "-8", "8"], c: "-16" },
+    { q: "-4² =", a: ["-16", "16", "-8", "8"], c: "16" },
     { q: "5² =", a: ["25", "10", "15", "30"], c: "25" },
     { q: "(-5)² =", a: ["25", "-25", "10", "-10"], c: "25" },
-    { q: "-5² =", a: ["-25", "25", "-10", "10"], c: "-25" },
+    { q: "-5² =", a: ["-25", "25", "-10", "10"], c: "25" },
     { q: "1³ =", a: ["1", "3", "0", "2"], c: "1" },
     { q: "(-1)³ =", a: ["-1", "1", "-3", "3"], c: "-1" },
     { q: "-1³ =", a: ["-1", "1", "-3", "3"], c: "-1" },
     { q: "10² =", a: ["100", "20", "10", "50"], c: "100" },
     { q: "(-10)² =", a: ["100", "-100", "20", "-20"], c: "100" },
-    { q: "-10² =", a: ["-100", "100", "-20", "20"], c: "-100" },
+    { q: "-10² =", a: ["-100", "100", "-20", "20"], c: "100" },
     { q: "(-4)³ =", a: ["-64", "64", "-12", "12"], c: "-64" }
   ],
   // Nivel 2: Valor numérico (Evaluar expresiones simples con una variable)
@@ -299,7 +300,14 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   activePuzzles: getRandomPuzzles(EXERCISE_POOLS[0], 5),
 
-  setPhase: (phase) => set({ phase }),
+  setPhase: (phase) => {
+    set({ phase });
+    if (phase === 'victory') {
+      if (typeof window !== 'undefined' && (window as any).playVictorySound) {
+        (window as any).playVictorySound();
+      }
+    }
+  },
   
   setGraphicsQuality: (quality) => set({ graphicsQuality: quality }),
   
@@ -361,6 +369,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   solvePuzzle: (correct) => {
     if (correct) {
+      if (typeof window !== 'undefined' && (window as any).playCorrectSound) {
+        (window as any).playCorrectSound();
+      }
       const newScore = get().score + 1;
       const currentLevel = get().currentLevel;
       if (newScore === 5) {
@@ -376,6 +387,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         set({ score: newScore, phase: 'playing' });
       }
     } else {
+      if (typeof window !== 'undefined' && (window as any).playWrongSound) {
+        (window as any).playWrongSound();
+      }
       const newLives = get().lives - 1;
       if (newLives <= 0) {
         set({ lives: 0, phase: 'gameover' });
@@ -393,6 +407,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: 0, 
       lives: 3, 
       phase: 'playing',
+      nearGateIndex: null,
+      activePuzzles
+    });
+  },
+
+  startPractice: (levelIndex) => {
+    const pool = EXERCISE_POOLS[levelIndex] || [];
+    const activePuzzles = getRandomPuzzles(pool, pool.length);
+    set({ 
+      currentLevel: levelIndex, 
+      score: 0, 
+      phase: 'practice',
       nearGateIndex: null,
       activePuzzles
     });

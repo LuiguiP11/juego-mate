@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy, Upload, RefreshCw } from 'lucide-react';
+import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy, Upload, RefreshCw, BookOpen } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebase';
@@ -670,6 +670,7 @@ export default function StartScreen() {
     setPlayerInfo, 
     setPhase, 
     startLevel, 
+    startPractice,
     gender, 
     setGender,
     playerActividad,
@@ -779,6 +780,34 @@ export default function StartScreen() {
           } else {
             fullName = dbUsuario ? (dbUsuario.charAt(0).toUpperCase() + dbUsuario.slice(1)) : 'Héroe Desconocido';
           }
+        }
+
+        // Check if student has already registered a score in the 'notas' collection (only 1 attempt allowed)
+        // Exempt Linday Torres (linday.torres) from this restriction so she can demo as many times as needed
+        const cleanUnidad = "t2";
+        const cleanActividadId = "juego_algebra";
+        const scoreDocId = `${dbUsuario.toLowerCase().trim()}_${cleanUnidad}_${cleanActividadId}`;
+        
+        let alreadyAttempted = false;
+        let existingScore = 0;
+        
+        if (dbUsuario.toLowerCase().trim() !== 'linday.torres') {
+          try {
+            const scoreDocSnap = await getDoc(doc(db, 'notas', scoreDocId));
+            if (scoreDocSnap.exists()) {
+              alreadyAttempted = true;
+              const data = scoreDocSnap.data();
+              existingScore = data.punteo ?? 0;
+            }
+          } catch (e) {
+            console.warn("Error checking existing score:", e);
+          }
+        }
+
+        if (alreadyAttempted) {
+          setError(`Acceso denegado: El alumno "${fullName}" ya ha registrado su intento en la base de datos "mate-experimental" con un punteo de ${existingScore}/10. Solo se permite una oportunidad por estudiante.`);
+          setVerifying(false);
+          return;
         }
 
         const gradoSolo = studentData.grado || studentData.Grado || 'Grado Indefinido';
@@ -1106,6 +1135,20 @@ export default function StartScreen() {
                 )}
               </div>
               {verifying ? 'VERIFICANDO...' : !validatedStudent ? 'ESCANEA TU QR PARA COMENZAR' : 'INICIAR CRÓNICA'}
+            </motion.button>
+
+            {/* Free Practice Mode Option */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                startPractice(selectedLevel);
+              }}
+              className="w-full py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-purple-900/40 via-black/80 to-amber-900/30 hover:from-purple-800/60 hover:to-amber-800/40 text-amber-300 hover:text-white border border-amber-500/30 text-xs sm:text-sm font-serif font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.05)] hover:shadow-[0_0_25px_rgba(245,158,11,0.25)]"
+            >
+              <BookOpen size={13} className="text-amber-400 group-hover:scale-110 transition-transform animate-pulse" />
+              <span>📚 SALA DE PRÁCTICA (SIN QR)</span>
             </motion.button>
 
             {/* Sound & Controls Guide Widget */}

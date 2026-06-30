@@ -102,6 +102,9 @@ export default function Player() {
     if (jump && onGround.current) {
       velocity.current.y = JUMP_FORCE;
       onGround.current = false;
+      if (typeof window !== 'undefined' && (window as any).playJumpSound) {
+        (window as any).playJumpSound();
+      }
     }
 
     position.current.x += velocity.current.x;

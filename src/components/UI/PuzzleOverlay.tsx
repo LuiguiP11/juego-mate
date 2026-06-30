@@ -37,7 +37,7 @@ function getExplanation(puzzle: Puzzle, currentLevel: number): string {
       if (isNegativeGrouped) {
         return `Recuerda: (-${val})² significa multiplicar la base completa, incluyendo su signo negativo, por sí misma:\n\n(-${val}) × (-${val}) = ${puzzle.c}\n\n¡Menos por menos siempre da MÁS! Todo número negativo elevado a una potencia par da un resultado positivo.`;
       } else if (isNegative) {
-        return `Recuerda: -${val}² significa que el signo negativo está afuera de la potencia. El exponente 2 solo afecta al número, no al signo:\n\n-( ${val} × ${val} ) = -( ${Number(val)*Number(val)} ) = ${puzzle.c}\n\n¡Como no hay paréntesis, el resultado se queda con el signo negativo!`;
+        return `Recuerda: Según lo aprendido en nuestra clase, calculamos -${val}² multiplicando la base negativa por sí misma completo:\n\n(-${val}) × (-${val}) = ${puzzle.c}\n\n¡Menos por menos siempre da MÁS! Por lo tanto, el resultado final es positivo.`;
       } else {
         return `Recuerda: ${val}² es elevar al cuadrado, es decir, multiplicar el número por sí mismo:\n\n${val} × ${val} = ${puzzle.c}`;
       }

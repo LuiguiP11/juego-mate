@@ -13,13 +13,14 @@ import PuzzleOverlay from './PuzzleOverlay';
 import GameOverScreen from './GameOverScreen';
 import VictoryScreen from './VictoryScreen';
 import CertificateScreen from './CertificateScreen';
+import PracticeOverlay from './PracticeOverlay';
 import ControlsHint from './ControlsHint';
 
 function HUD() {
   const { lives, score, playerName, currentLevel, phase, retries, nearGateIndex, setPhase, muted, toggleMute, inventory, totalPoints, setMobileControl, graphicsQuality, setGraphicsQuality } = useGameStore();
   const level = LEVELS[currentLevel];
 
-  if (phase === 'start' || phase === 'intro' || phase === 'certificate') return null;
+  if (phase === 'start' || phase === 'intro' || phase === 'certificate' || phase === 'practice') return null;
 
   return (
     <div className="fixed inset-x-0 top-0 z-50 pointer-events-none h-full">
@@ -252,6 +253,7 @@ export default function UIOverlay() {
         {phase === 'gameover' && <GameOverScreen key="over" />}
         {phase === 'victory' && <VictoryScreen key="victory" />}
         {phase === 'certificate' && <CertificateScreen key="cert" />}
+        {phase === 'practice' && <PracticeOverlay key="practice" />}
       </AnimatePresence>
     </>
   );
