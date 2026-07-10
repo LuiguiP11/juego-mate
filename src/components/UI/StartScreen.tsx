@@ -5,11 +5,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy, Upload, RefreshCw, BookOpen } from 'lucide-react';
+import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy, Upload, RefreshCw, BookOpen, Video } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import VideoTutorialModal from './VideoTutorialModal';
 
 const getStudentUserCandidates = (text: string): string[] => {
   let cleaned = text.trim();
@@ -714,6 +715,8 @@ export default function StartScreen() {
     clave: string;
   } | null>(null);
 
+  const [showVideoTutorial, setShowVideoTutorial] = useState(false);
+
   const handleStart = () => {
     if (validatedStudent) {
       console.log("Iniciando aventura con estudiante ya verificado:", validatedStudent);
@@ -1151,6 +1154,23 @@ export default function StartScreen() {
               <span>📚 SALA DE PRÁCTICA (SIN QR)</span>
             </motion.button>
 
+            {/* Video Tutorial Option */}
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                if (typeof window !== 'undefined' && (window as any).playClickSound) {
+                  (window as any).playClickSound();
+                }
+                setShowVideoTutorial(true);
+              }}
+              className="w-full py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-orange-900/40 via-black/80 to-red-900/30 hover:from-orange-800/60 hover:to-red-800/40 text-orange-300 hover:text-white border border-orange-500/30 text-xs sm:text-sm font-serif font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 group cursor-pointer shadow-[0_0_15px_rgba(249,115,22,0.05)] hover:shadow-[0_0_25px_rgba(249,115,22,0.25)]"
+            >
+              <Video size={13} className="text-orange-400 group-hover:scale-110 transition-transform" />
+              <span>🎬 VIDEO TUTORIAL DE INICIO</span>
+            </motion.button>
+
             {/* Sound & Controls Guide Widget */}
             <div className="pt-2.5 border-t border-white/10 flex items-center justify-between gap-2 text-[8px] sm:text-[10px] font-mono text-white/40">
               <button
@@ -1364,6 +1384,10 @@ export default function StartScreen() {
               </div>
             </motion.div>
           </div>
+        )}
+
+        {showVideoTutorial && (
+          <VideoTutorialModal key="video-tutorial" onClose={() => setShowVideoTutorial(false)} />
         )}
       </AnimatePresence>
 
