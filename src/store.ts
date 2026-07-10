@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { db } from './firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getPuzzleSubcategory } from './utils/mathUtils';
 
 export type GamePhase = 'start' | 'intro' | 'playing' | 'puzzle' | 'victory' | 'gameover' | 'certificate' | 'practice';
 
@@ -54,6 +55,18 @@ interface GameState {
     jump: boolean;
   };
   activePuzzles: Puzzle[];
+  
+  // Stats tracking
+  puzzleStartTime: number;
+  attemptHistory: {
+    q: string;
+    subcatId: string;
+    subcatName: string;
+    correct: boolean;
+    duration: number;
+  }[];
+  recordAttempt: (q: string, correct: boolean, duration: number) => void;
+  resetAttempts: () => void;
   
   // Actions
   setPhase: (phase: GamePhase) => void;
@@ -299,6 +312,27 @@ export const useGameStore = create<GameState>((set, get) => ({
     jump: false,
   },
   activePuzzles: getRandomPuzzles(EXERCISE_POOLS[0], 5),
+  
+  // Stats tracking initial state and actions
+  puzzleStartTime: Date.now(),
+  attemptHistory: [],
+  recordAttempt: (q, correct, duration) => {
+    const { currentLevel, attemptHistory } = get();
+    const subcat = getPuzzleSubcategory(q, currentLevel);
+    set({
+      attemptHistory: [
+        ...attemptHistory,
+        {
+          q,
+          subcatId: subcat.id,
+          subcatName: subcat.name,
+          correct,
+          duration,
+        }
+      ]
+    });
+  },
+  resetAttempts: () => set({ attemptHistory: [], puzzleStartTime: Date.now() }),
 
   setPhase: (phase) => {
     set({ phase });
@@ -408,7 +442,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       lives: 3, 
       phase: 'playing',
       nearGateIndex: null,
-      activePuzzles
+      activePuzzles,
+      attemptHistory: [],
+      puzzleStartTime: Date.now()
     });
   },
 
@@ -420,7 +456,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       score: 0, 
       phase: 'practice',
       nearGateIndex: null,
-      activePuzzles
+      activePuzzles,
+      attemptHistory: [],
+      puzzleStartTime: Date.now()
     });
   },
 
@@ -435,7 +473,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       retries: 3,
       inventory: [],
       totalPoints: 0,
-      activePuzzles
+      activePuzzles,
+      attemptHistory: [],
+      puzzleStartTime: Date.now()
     });
   },
 

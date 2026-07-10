@@ -88,7 +88,7 @@ function getExplanation(puzzle: Puzzle, currentLevel: number): string {
 }
 
 export default function PuzzleOverlay() {
-  const { currentLevel, score, solvePuzzle, activePuzzles } = useGameStore();
+  const { currentLevel, score, solvePuzzle, activePuzzles, recordAttempt } = useGameStore();
   const level = LEVELS[currentLevel];
   const graphicsQuality = useGameStore((state) => state.graphicsQuality);
   
@@ -116,6 +116,7 @@ export default function PuzzleOverlay() {
         if (prev <= 1) {
           clearInterval(timer);
           setResult('wrong');
+          recordAttempt(puzzle.q, false, maxTime);
           setShowExplanation(true);
           return 0;
         }
@@ -124,7 +125,7 @@ export default function PuzzleOverlay() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [result]);
+  }, [result, puzzle, maxTime, recordAttempt]);
 
   const handleAnswer = (ans: string, idx: number) => {
     if (result !== 'none') return;
@@ -132,6 +133,10 @@ export default function PuzzleOverlay() {
     setSelectedIdx(idx);
     const isCorrect = ans === puzzle.c;
     setResult(isCorrect ? 'correct' : 'wrong');
+    
+    // Record attempt for stats tracking
+    const duration = Math.max(1, maxTime - timeLeft);
+    recordAttempt(puzzle.q, isCorrect, duration);
     
     if (isCorrect) {
       setTimeout(() => {
