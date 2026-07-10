@@ -10,9 +10,11 @@ import {
   TrendingUp, Award, Clock, AlertCircle, Share2, 
   Brain, CheckCircle2, ChevronRight, RefreshCw, Smartphone, Mail, Sparkles 
 } from 'lucide-react';
+import { db } from '../../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function FamilyPerformancePanel() {
-  const { attemptHistory, playerName, currentLevel } = useGameStore();
+  const { attemptHistory, playerName, currentLevel, playerUser } = useGameStore();
   const level = LEVELS[currentLevel];
 
   const [analysisData, setAnalysisData] = useState<{
@@ -127,11 +129,40 @@ export default function FamilyPerformancePanel() {
   }, [attemptHistory]);
 
   // Sync to Parent Portals
-  const handleSyncToPortal = () => {
+  const handleSyncToPortal = async () => {
+    if (!playerUser) {
+      console.warn("No logged in student to sync with family portal.");
+      setError("Inicia sesión con tu código QR para poder sincronizar.");
+      return;
+    }
     setSyncStatus('syncing');
-    setTimeout(() => {
+    try {
+      const cleanUnidad = "t2";
+      const cleanActividadId = "juego_algebra";
+      const docId = `${playerUser.toLowerCase().trim()}_${cleanUnidad}_${cleanActividadId}`;
+      const docRef = doc(db, 'notas', docId);
+
+      // Save the performance report fields under a structured 'reporteFamilia' object
+      const reportData = {
+        reporteFamilia: {
+          analisisIA: analysisData?.analysis || 'Desempeño óptimo de álgebra. Sigue practicando.',
+          fortalezas: analysisData?.strengths || [],
+          recomendaciones: analysisData?.recommendations || [],
+          tiempoPromedio: stats.averageDuration,
+          efectividad: Math.round(stats.efficiency * 100),
+          temaDificil: topicInsights.hardest?.name || 'Ninguno',
+          temaFacil: topicInsights.easiest?.name || 'Ninguno',
+          fechaReporte: new Date().toISOString()
+        }
+      };
+
+      await setDoc(docRef, reportData, { merge: true });
       setSyncStatus('synced');
-    }, 2000);
+    } catch (err) {
+      console.error("Error syncing family report to Firestore:", err);
+      setError("No se pudo guardar el reporte en el portal familiar.");
+      setSyncStatus('idle');
+    }
   };
 
   // Copy shareable summary to clipboard

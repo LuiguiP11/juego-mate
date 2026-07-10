@@ -158,7 +158,7 @@ export default function Player() {
         }
 
         if (!isSolved) {
-            if (position.current.z < gateZ + 0.4 && position.current.z > gateZ - 0.4) {
+            if (position.current.z < gateZ + 0.4) {
                 position.current.z = gateZ + 0.4;
                 velocity.current.z = 0;
             }

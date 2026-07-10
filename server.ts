@@ -104,7 +104,7 @@ Por favor, devuelve la respuesta en formato JSON válido con la siguiente estruc
 No incluyas markdown de bloque de código de JSON (como \`\`\`json ... \`\`\`), devuelve únicamente el texto plano del objeto JSON.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: prompt
       });
 
