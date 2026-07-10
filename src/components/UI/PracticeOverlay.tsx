@@ -3,15 +3,182 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGameStore, LEVELS, EXERCISE_POOLS } from '../../store';
-import { Check, X, Lightbulb, BookOpen, ArrowRight, Home, Flame, Trophy, Star } from 'lucide-react';
+import { 
+  Check, X, Lightbulb, BookOpen, ArrowRight, Home, 
+  Flame, Trophy, Star, Brain, Sparkles, AlertCircle, RefreshCw 
+} from 'lucide-react';
 
 interface Puzzle {
   q: string;
   a: string[];
   c: string;
+}
+
+export interface SubcategoryDetails {
+  name: string;
+  tip: string;
+  id: string;
+}
+
+export function getPuzzleSubcategory(q: string, levelIndex: number): SubcategoryDetails {
+  if (levelIndex === 0) {
+    if (q.includes('²')) {
+      if (q.startsWith('(-')) {
+        return {
+          id: 'pot_sq_neg_paren',
+          name: 'Cuadrados con Base Negativa entre Paréntesis',
+          tip: '¡Recuerda que todo número negativo elevado al cuadrado (par) con paréntesis da POSITIVO! P. ej. (-3) × (-3) = +9.'
+        };
+      } else if (q.startsWith('-')) {
+        return {
+          id: 'pot_sq_neg_noparen',
+          name: 'Cuadrados con Signo Negativo sin Paréntesis',
+          tip: '¡Cuidado! Si no hay paréntesis, el signo menos (-) se queda afuera y no se eleva. P. ej. -3² = -(3 × 3) = -9.'
+        };
+      } else {
+        return {
+          id: 'pot_sq_pos',
+          name: 'Cuadrados de Números Positivos',
+          tip: 'Es muy sencillo, solo multiplica el número por sí mismo una vez. P. ej. 4² = 4 × 4 = 16.'
+        };
+      }
+    } else if (q.includes('³')) {
+      if (q.startsWith('(-')) {
+        return {
+          id: 'pot_cb_neg_paren',
+          name: 'Cubos con Base Negativa entre Paréntesis',
+          tip: 'Un número negativo elevado al cubo (impar) con paréntesis conserva su signo negativo. P. ej. (-2)³ = (-2) × (-2) × (-2) = -8.'
+        };
+      } else if (q.startsWith('-')) {
+        return {
+          id: 'pot_cb_neg_noparen',
+          name: 'Cubos con Signo Negativo sin Paréntesis',
+          tip: 'Al no tener paréntesis, el signo menos se queda afuera. Al ser impar, de todas formas el resultado es negativo. P. ej. -2³ = -8.'
+        };
+      } else {
+        return {
+          id: 'pot_cb_pos',
+          name: 'Cubos de Números Positivos',
+          tip: 'Multiplica el número por sí mismo tres veces. P. ej. 3³ = 3 × 3 × 3 = 27.'
+        };
+      }
+    }
+  }
+
+  if (levelIndex === 1) {
+    if (q.includes('/')) {
+      return {
+        id: 'val1_div',
+        name: 'Evaluación con Divisiones o Fracciones',
+        tip: 'Recuerda hacer primero la división (p. ej. y/2) antes de sumar o restar el resto de la expresión.'
+      };
+    } else if (q.includes('²') || q.includes('³')) {
+      return {
+        id: 'val1_power',
+        name: 'Evaluación de Variables con Potencias',
+        tip: 'Primero eleva el valor de la variable a la potencia indicada, y luego realiza las multiplicaciones, sumas o restas.'
+      };
+    } else if (q.includes('=-')) {
+      return {
+        id: 'val1_neg',
+        name: 'Sustitución de Variables con Valores Negativos',
+        tip: 'Al multiplicar un número por un valor negativo, recuerda la ley de signos: más por menos es menos, y menos por menos es más.'
+      };
+    } else {
+      return {
+        id: 'val1_simple',
+        name: 'Evaluación Lineal Simple de 1 Variable',
+        tip: 'Reemplaza la letra por el número. Recuerda que si el número está pegado a la letra, se están multiplicando.'
+      };
+    }
+  }
+
+  if (levelIndex === 2) {
+    if (q.includes('²') || q.includes('³')) {
+      return {
+        id: 'val2_power',
+        name: 'Sustitución con Exponentes (Dos Variables)',
+        tip: 'Si una de las variables tiene exponente, haz esa operación primero. ¡Ojo con el signo si la base es negativa!'
+      };
+    } else if (q.includes('/') || q.includes('ab') || q.includes('xy')) {
+      return {
+        id: 'val2_mult_div',
+        name: 'Multiplicación o División de Dos Variables',
+        tip: 'Para "xy" o "ab", multiplica los dos valores sustituidos directamente. Aplica la ley de signos con cuidado.'
+      };
+    } else if (q.includes('=-') && (q.match(/=-/g) || []).length > 1) {
+      return {
+        id: 'val2_double_neg',
+        name: 'Sustitución con Múltiples Valores Negativos',
+        tip: 'Ambas variables son negativas. Pon paréntesis al reemplazarlas para no equivocarte con los signos continuos.'
+      };
+    } else {
+      return {
+        id: 'val2_simple',
+        name: 'Evaluación Lineal con Dos Variables',
+        tip: 'Sustituye ordenadamente cada letra en su lugar y opera respetando la jerarquía: primero multiplicaciones, luego sumas/restas.'
+      };
+    }
+  }
+
+  if (levelIndex === 3) {
+    if (q.includes('²') || q.includes('³')) {
+      return {
+        id: 'red_power',
+        name: 'Reducción de Términos con Exponentes',
+        tip: 'Solo puedes agrupar x² con otros x² y x³ con otros x³. ¡No los mezcles con términos lineales como x!'
+      };
+    } else if (q.includes('xy') || q.includes('ab')) {
+      return {
+        id: 'red_compound',
+        name: 'Reducción de Términos Compuestos (ab, xy)',
+        tip: 'Los términos con letras unidas como "xy" solo se reducen con otros que tengan exactamente las mismas letras unidas.'
+      };
+    } else if (q.includes('y') && q.includes('x')) {
+      return {
+        id: 'red_two_vars',
+        name: 'Agrupamiento de Clanes con Dos Letras (x, y)',
+        tip: 'Suma o resta las x por un lado, y las y por otro lado. Al final quedan como clanes separados, ej: 3x + y.'
+      };
+    } else {
+      return {
+        id: 'red_simple',
+        name: 'Reducción de una Sola Variable',
+        tip: 'Agrupa todos los términos con la misma letra sumando o restando sus coeficientes numéricos.'
+      };
+    }
+  }
+
+  if (levelIndex === 4) {
+    if (q.includes('[') || q.includes(']')) {
+      return {
+        id: 'grp_nested',
+        name: 'Signos de Agrupación Anidados (Corchetes)',
+        tip: 'Comienza eliminando los paréntesis () más internos, y luego elimina los corchetes [] externos.'
+      };
+    } else if (q.includes('-(') || q.includes('-[')) {
+      return {
+        id: 'grp_minus',
+        name: 'Cambio de Signos por Signo Menos Exterior',
+        tip: '¡REGLA DE ORO! Un signo menos justo antes de un paréntesis le cambia el signo a TODO lo que esté adentro.'
+      };
+    } else {
+      return {
+        id: 'grp_simple',
+        name: 'Eliminación Simple de Paréntesis',
+        tip: 'Si hay un signo más (+) antes del paréntesis, puedes quitarlo sin alterar los signos de adentro.'
+      };
+    }
+  }
+
+  return {
+    id: 'general',
+    name: 'Álgebra Básica General',
+    tip: 'Opera con cuidado, paso a paso, prestando atención a la jerarquía de operadores y a la ley de signos.'
+  };
 }
 
 function getExplanation(puzzle: Puzzle, currentLevel: number): string {
@@ -92,7 +259,6 @@ export default function PracticeOverlay() {
   const level = LEVELS[currentLevel];
   const graphicsQuality = useGameStore((state) => state.graphicsQuality);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [solvedCount, setSolvedCount] = useState(0);
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
@@ -102,9 +268,84 @@ export default function PracticeOverlay() {
   const [eliminatedIndices, setEliminatedIndices] = useState<number[]>([]);
   const [hasUsedHint, setHasUsedHint] = useState(false);
 
-  // Get current puzzle safely
-  const currentPool = activePuzzles && activePuzzles.length > 0 ? activePuzzles : EXERCISE_POOLS[currentLevel];
-  const puzzle = currentPool[currentIndex % currentPool.length];
+  // Adaptive logic states
+  const [wrongCounts, setWrongCounts] = useState<Record<string, number>>({});
+  const [correctCounts, setCorrectCounts] = useState<Record<string, number>>({});
+  const [showTutorAdvice, setShowTutorAdvice] = useState(true);
+  const [isAdaptiveSuggestion, setIsAdaptiveSuggestion] = useState(false);
+
+  const currentPool = useMemo(() => {
+    return activePuzzles && activePuzzles.length > 0 ? activePuzzles : EXERCISE_POOLS[currentLevel];
+  }, [activePuzzles, currentLevel]);
+
+  const [puzzle, setPuzzle] = useState<Puzzle>(() => currentPool[0]);
+
+  // Sync puzzle when currentLevel or currentPool changes
+  useEffect(() => {
+    setPuzzle(currentPool[0]);
+    setWrongCounts({});
+    setCorrectCounts({});
+    setIsAdaptiveSuggestion(false);
+  }, [currentLevel, currentPool]);
+
+  // Unique subcategories in current level pool for stats
+  const uniqueSubcatsInPool = useMemo(() => {
+    const ids = new Set<string>();
+    currentPool.forEach(p => {
+      ids.add(getPuzzleSubcategory(p.q, currentLevel).id);
+    });
+    return Array.from(ids);
+  }, [currentPool, currentLevel]);
+
+  const subIdsToNames = useMemo(() => {
+    const mapping: Record<string, string> = {};
+    currentPool.forEach(p => {
+      const sub = getPuzzleSubcategory(p.q, currentLevel);
+      mapping[sub.id] = sub.name;
+    });
+    return mapping;
+  }, [currentPool, currentLevel]);
+
+  // Identify weakest subcategory (with any wrong count > 0)
+  const weakestCategory = useMemo(() => {
+    let weakestId = '';
+    let maxWrong = 0;
+    Object.entries(wrongCounts).forEach(([id, count]) => {
+      if (count > maxWrong) {
+        maxWrong = count;
+        weakestId = id;
+      }
+    });
+    if (weakestId && maxWrong > 0) {
+      const foundMatch = currentPool.find(p => getPuzzleSubcategory(p.q, currentLevel).id === weakestId);
+      if (foundMatch) {
+        return getPuzzleSubcategory(foundMatch.q, currentLevel);
+      }
+    }
+    return null;
+  }, [wrongCounts, currentLevel, currentPool]);
+
+  // Get active tip (either weakest or current puzzle)
+  const activeTip = useMemo(() => {
+    if (weakestCategory) {
+      return weakestCategory.tip;
+    }
+    return getPuzzleSubcategory(puzzle.q, currentLevel).tip;
+  }, [weakestCategory, puzzle, currentLevel]);
+
+  // Tutor's message
+  const tutorMessage = useMemo(() => {
+    if (solvedCount === 0 && Object.keys(wrongCounts).length === 0) {
+      return "¡Hola! Soy tu Tutor de Calentamiento. Practicaremos sin guardar notas. Analizaré tus respuestas para sugerirte ejercicios personalizados según lo que necesites reforzar.";
+    }
+    if (weakestCategory) {
+      return `¡Buen esfuerzo! Veo que te vendría genial repasar "${weakestCategory.name}". He adaptado la Sala de Práctica para darte más ejercicios similares de forma progresiva. ¡Tú puedes!`;
+    }
+    if (streak >= 3) {
+      return `¡Fantástico! Llevas una racha de ${streak} respuestas correctas. Estás en perfectas condiciones de afrontar el examen oficial con tu código QR.`;
+    }
+    return "¡Vas muy bien! Estás entrenando con una racha impecable. Sigue resolviendo para perfeccionar tu destreza en álgebra.";
+  }, [solvedCount, wrongCounts, weakestCategory, streak]);
 
   const handleAnswer = (ans: string, idx: number) => {
     if (result !== 'none') return;
@@ -114,6 +355,8 @@ export default function PracticeOverlay() {
     setResult(isCorrect ? 'correct' : 'wrong');
     setShowExplanation(true);
     
+    const subcat = getPuzzleSubcategory(puzzle.q, currentLevel);
+
     if (isCorrect) {
       setSolvedCount((p) => p + 1);
       setStreak((p) => {
@@ -121,8 +364,31 @@ export default function PracticeOverlay() {
         if (next > maxStreak) setMaxStreak(next);
         return next;
       });
+      
+      // Save correct trace
+      setCorrectCounts(prev => ({
+        ...prev,
+        [subcat.id]: (prev[subcat.id] || 0) + 1
+      }));
+      
+      // Decrease wrong count representation on success to represent learning/mastery
+      setWrongCounts(prev => {
+        if (prev[subcat.id] && prev[subcat.id] > 0) {
+          return {
+            ...prev,
+            [subcat.id]: Math.max(0, prev[subcat.id] - 1)
+          };
+        }
+        return prev;
+      });
     } else {
       setStreak(0);
+      
+      // Save wrong trace
+      setWrongCounts(prev => ({
+        ...prev,
+        [subcat.id]: (prev[subcat.id] || 0) + 1
+      }));
     }
   };
 
@@ -132,7 +398,47 @@ export default function PracticeOverlay() {
     setShowExplanation(false);
     setEliminatedIndices([]);
     setHasUsedHint(false);
-    setCurrentIndex((prev) => prev + 1);
+
+    // Dynamic adaptive selection
+    let weakestId = '';
+    let maxWrong = 0;
+    Object.entries(wrongCounts).forEach(([id, count]) => {
+      if (count > maxWrong) {
+        maxWrong = count;
+        weakestId = id;
+      }
+    });
+
+    let nextPuzzle: Puzzle | null = null;
+
+    // 70% chance to prioritize weak area if there is one with mistakes
+    if (weakestId && maxWrong > 0 && Math.random() < 0.7) {
+      const weakPuzzles = currentPool.filter(p => {
+        const sub = getPuzzleSubcategory(p.q, currentLevel);
+        return sub.id === weakestId && p.q !== puzzle.q;
+      });
+
+      if (weakPuzzles.length > 0) {
+        const randIdx = Math.floor(Math.random() * weakPuzzles.length);
+        nextPuzzle = weakPuzzles[randIdx];
+        setIsAdaptiveSuggestion(true);
+      }
+    }
+
+    // Fallback: Pick another random puzzle from the pool (excluding current) or next sequential
+    if (!nextPuzzle) {
+      setIsAdaptiveSuggestion(false);
+      const remainingPuzzles = currentPool.filter(p => p.q !== puzzle.q);
+      if (remainingPuzzles.length > 0) {
+        const randIdx = Math.floor(Math.random() * remainingPuzzles.length);
+        nextPuzzle = remainingPuzzles[randIdx];
+      } else {
+        const nextIdx = (currentPool.indexOf(puzzle) + 1) % currentPool.length;
+        nextPuzzle = currentPool[nextIdx];
+      }
+    }
+
+    setPuzzle(nextPuzzle);
   };
 
   const useHint = () => {
@@ -166,11 +472,11 @@ export default function PracticeOverlay() {
       <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="w-full max-w-xl bg-[#08090f] border-[3px] sm:border-[8px] border-[#131522] rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 relative shadow-[0_0_100px_rgba(245,158,11,0.15)] overflow-hidden my-auto"
+        className="w-full max-w-2xl bg-[#08090f] border-[3px] sm:border-[8px] border-[#131522] rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-7 relative shadow-[0_0_100px_rgba(168,85,247,0.15)] overflow-hidden my-auto"
       >
         {/* Design Accents */}
-        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 opacity-80" />
-        <div className="absolute top-0 right-0 p-4 opacity-5 select-none pointer-events-none text-amber-500 font-serif text-8xl">
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 via-amber-500 to-purple-500 opacity-80" />
+        <div className="absolute top-0 right-0 p-4 opacity-5 select-none pointer-events-none text-purple-500 font-serif text-8xl">
           α β γ
         </div>
 
@@ -178,8 +484,8 @@ export default function PracticeOverlay() {
           {/* Header */}
           <header className="w-full flex justify-between items-center pb-2 border-b border-white/5">
             <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg border border-amber-500/20 text-xs font-black uppercase tracking-wider font-mono">
-                Sala de Práctica
+              <span className="p-1.5 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20 text-xs font-black uppercase tracking-wider font-mono">
+                SALA DE PRÁCTICA
               </span>
               <span className="text-white/60 font-mono text-[10px] sm:text-xs">
                 {level.name}
@@ -224,11 +530,116 @@ export default function PracticeOverlay() {
             </div>
           </div>
 
-          {/* Practice Motivation text */}
-          <div className="text-center">
-            <p className="text-[8.5px] sm:text-[10.5px] text-white/50 italic max-w-md mx-auto">
-              "Aquí puedes equivocarte las veces que quieras. Cada error es una llave secreta que te enseña el camino."
-            </p>
+          {/* Adaptive Warm-up Tutor Companion Panel */}
+          <div className="w-full bg-[#12101b] border border-purple-500/20 rounded-2xl p-3 sm:p-4 relative overflow-hidden shadow-[0_4px_20px_rgba(168,85,247,0.05)] text-left">
+            <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none">
+              <Brain size={48} className="text-purple-400" />
+            </div>
+            
+            <div className="flex items-start gap-3">
+              {/* Wise Owl Avatar */}
+              <div className="relative shrink-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center border border-purple-400/30 text-lg shadow-md">
+                  🦉
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-purple-500 border-2 border-[#12101b] flex items-center justify-center">
+                  <Sparkles size={8} className="text-white animate-spin" />
+                </div>
+              </div>
+
+              {/* Tutor Dialogue & Content */}
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9.5px] font-mono text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1">
+                    🦉 Tutor Inteligente de Calentamiento
+                  </span>
+                  <button
+                    onClick={() => setShowTutorAdvice(!showTutorAdvice)}
+                    className="text-[9px] font-mono text-white/40 hover:text-white/80 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                  >
+                    {showTutorAdvice ? "Ocultar Diagnóstico" : "Ver Diagnóstico"}
+                  </button>
+                </div>
+
+                <p className="text-[10.5px] text-gray-200 font-sans leading-relaxed">
+                  {tutorMessage}
+                </p>
+
+                {/* Expanded Diagnosis and Tip Box */}
+                <AnimatePresence>
+                  {showTutorAdvice && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-2 mt-2 border-t border-white/5 space-y-2">
+                        {/* Current focus target */}
+                        {weakestCategory ? (
+                          <div className="flex items-center gap-1.5 text-[9.5px] text-amber-400 font-mono font-bold">
+                            <AlertCircle size={11} className="text-amber-500 animate-pulse shrink-0" />
+                            <span>Enfoque actual: Reforzar "{weakestCategory.name}"</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-[9.5px] text-green-400 font-mono font-bold">
+                            <Check size={11} className="text-green-400 shrink-0" />
+                            <span>Estado: ¡Rendimiento óptimo en todos los temas de práctica!</span>
+                          </div>
+                        )}
+
+                        {/* Interactive Tip Box */}
+                        <div className="bg-purple-950/20 border border-purple-500/10 rounded-lg p-2.5">
+                          <span className="text-[8px] font-mono text-purple-300 font-bold uppercase block tracking-wider mb-1">
+                            💡 RECOMENDACIÓN MATEMÁTICA:
+                          </span>
+                          <p className="text-[10px] sm:text-[10.5px] text-purple-200 italic font-serif leading-relaxed">
+                            "{activeTip}"
+                          </p>
+                        </div>
+
+                        {/* Subcategory mastery list */}
+                        <div className="pt-1">
+                          <span className="text-[8px] font-mono text-white/30 uppercase block mb-1">
+                            Diagnóstico de destrezas en este nivel:
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {uniqueSubcatsInPool.map((subId) => {
+                              const subName = subIdsToNames[subId] || subId;
+                              const wr = wrongCounts[subId] || 0;
+                              const co = correctCounts[subId] || 0;
+                              const total = wr + co;
+                              const accuracy = total > 0 ? Math.round((co / total) * 100) : null;
+                              
+                              return (
+                                <div key={subId} className="bg-black/35 p-1.5 rounded border border-white/5 flex items-center justify-between text-[9px]">
+                                  <span className="text-white/60 font-sans truncate max-w-[170px]" title={subName}>
+                                    {subName}
+                                  </span>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    {accuracy !== null ? (
+                                      <span className={`font-mono font-bold ${accuracy >= 80 ? 'text-green-400' : accuracy >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                        {accuracy}%
+                                      </span>
+                                    ) : (
+                                      <span className="text-white/20 font-mono">-</span>
+                                    )}
+                                    <div className="flex gap-0.5 text-[7px] font-mono ml-1">
+                                      <span className="text-green-400">+{co}</span>
+                                      <span className="text-red-400">-{wr}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
 
           {/* Question Box */}
@@ -236,6 +647,14 @@ export default function PracticeOverlay() {
             <div className="absolute top-2 left-2 text-[8px] font-mono text-white/20 uppercase font-bold">
               Pregunta de Entrenamiento
             </div>
+            
+            {isAdaptiveSuggestion && (
+              <div className="absolute top-2 right-2 text-[8px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.5 rounded font-mono font-bold flex items-center gap-1 animate-pulse">
+                <Sparkles size={8} className="text-purple-400" />
+                <span>🎯 REFUERZO DE PUNTO DÉBIL</span>
+              </div>
+            )}
+
             <motion.span 
               key={puzzle.q}
               initial={{ y: 15, opacity: 0 }}

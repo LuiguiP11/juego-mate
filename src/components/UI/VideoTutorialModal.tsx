@@ -23,37 +23,37 @@ const CHAPTERS: Chapter[] = [
   {
     id: 1,
     title: "1. Acceso con QR o Archivo",
-    subtitle: "Cómo ingresar al juego usando el código del maestro",
-    duration: 10,
-    description: "Cada alumno tiene un código QR único entregado por su maestro. En la pantalla de inicio, presiona 'ESCANEAR QR' y permite el acceso a la cámara para leerlo desde tu teléfono o tablet. Si estás en una computadora, también puedes presionar 'SUBIR IMAGEN' para cargar una captura de pantalla, foto o PDF con tu código QR. ¡Esto valida de inmediato tu identidad!"
+    subtitle: "Cómo ingresar de forma oficial usando el código de tu maestro",
+    duration: 11,
+    description: "Cada alumno cuenta con un código QR personalizado provisto por el profesor. Puedes acceder de dos maneras sencillas: 1) Si juegas en celular o tablet, haz clic en 'ESCANEAR QR' para activar tu cámara y leer el código en un segundo. 2) Si estás en computadora, presiona 'SUBIR IMAGEN' para cargar una captura, foto o archivo PDF con tu QR. Esto te identificará oficialmente para registrar tu nota en la base de datos."
   },
   {
     id: 2,
-    title: "2. Sala de Práctica (Sin Registro)",
-    subtitle: "Entrena libremente sin necesidad de códigos ni notas",
-    duration: 9,
-    description: "Para los padres que quieren probar el juego, o para alumnos que desean un calentamiento antes de la evaluación real: en el menú principal presiona el botón morado '📚 SALA DE PRÁCTICA'. Podrás jugar, saltar y resolver ecuaciones de forma totalmente libre, sin registrar ninguna calificación en el servidor."
+    title: "2. Sala de Práctica (Indispensable)",
+    subtitle: "Por qué y cómo utilizar el modo de práctica libre",
+    duration: 13,
+    description: "¡Atención alumnos y padres de familia! El examen real con código QR permite ÚNICAMENTE un (1) intento oficial por estudiante. Por eso, el botón morado '📚 SALA DE PRÁCTICA' es indispensable: les permite a los niños jugar, saltar y resolver todas las ecuaciones que quieran sin límites y sin registrar ninguna nota. Es el espacio perfecto para cometer errores, entrenar con las preguntas de álgebra y ganar total confianza antes de la evaluación real."
   },
   {
     id: 3,
-    title: "3. Selección de Niveles",
-    subtitle: "Explora los diferentes templos de álgebra",
-    duration: 8,
-    description: "En la parte superior de la pantalla de inicio se ubica el Selector de Niveles. Puedes alternar entre el 'Nivel 1: Ecuaciones de 1er Grado' y el 'Nivel 2: Sistemas de Ecuaciones 2x2'. Asegúrate de seleccionar el nivel indicado por el profesor antes de ingresar con tu código QR."
+    title: "3. Templos y Valor de Niveles",
+    subtitle: "Consigue hasta 10 puntos completando los 5 Templos",
+    duration: 11,
+    description: "La aventura consta de 5 Templos de Álgebra (Potencias, Valor Numérico, Sustitución, Reducción de Términos y Agrupamiento). Cada nivel completado con éxito otorga exactamente 2 PUNTOS para tu nota final, acumulando un máximo de 10 PUNTOS por resolver toda la crónica. Asegúrate de verificar qué nivel o tema te ha asignado tu profesor antes de comenzar tu partida oficial."
   },
   {
     id: 4,
-    title: "4. Movimiento del Personaje",
-    subtitle: "Controles sencillos para computadoras y celulares",
-    duration: 9,
-    description: "Mover a tu héroe es muy fácil. En computadoras (PC/Laptop), usa las teclas A / D o las Flechas Izquierda / Derecha para caminar, y presiona la barra ESPACIADORA para saltar entre plataformas. En celulares o tablets, aparecerá un joystick táctil en el lado izquierdo para caminar y un botón circular a la derecha para saltar."
+    title: "4. Formas de Movimiento",
+    subtitle: "Controles intuitivos para todo tipo de pantallas",
+    duration: 10,
+    description: "Moverse por los templos es muy simple: En computadoras, usa las teclas A / D o las flechas de dirección (← / →) para caminar de izquierda a derecha, y presiona la Barra Espaciadora para saltar con agilidad. En celulares o tablets, el juego detectará tu pantalla táctil de inmediato y activará un joystick virtual a la izquierda y un gran botón de salto a la derecha."
   },
   {
     id: 5,
-    title: "5. Cristales Algebraicos y Vidas",
-    subtitle: "Resuelve los enigmas para salvar la partida",
-    duration: 11,
-    description: "Explora el mapa y salta hacia los Cristales Dorados. Al tocarlos, se revelará un portal matemático con una ecuación y 3 opciones de respuesta. Tienes 3 vidas (corazones). Responder correctamente purifica el cristal; fallar te restará una vida. ¡Al resolver con éxito los 5 cristales, tu nota se registrará automáticamente!"
+    title: "5. Punteo y Registro Automático",
+    subtitle: "Tu progreso se guarda al instante en la plataforma",
+    duration: 12,
+    description: "Al recolectar y resolver con éxito los 5 Cristales Dorados de un nivel, el juego registrará tu puntuación de forma AUTOMÁTICA en los servidores de la plataforma, enviándola directo a tu maestro. No tienes que presionar ningún botón para guardar: la base de datos se actualiza sola al instante de ganar el nivel. ¡También podrás descargar tu Certificado de Sabio Matemático para compartir tu éxito!"
   }
 ];
 
@@ -257,39 +257,55 @@ export default function VideoTutorialModal({ onClose }: VideoTutorialModalProps)
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#18112d]/30 to-[#000]/95 p-4"
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#18112d]/40 to-[#000]/95 p-3"
                   >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.1)_0%,transparent_75%)]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.15)_0%,transparent_75%)] animate-pulse" />
 
-                    <div className="w-full max-w-[280px] bg-[#120f18] border border-purple-500/20 rounded-xl p-3 flex flex-col gap-2.5 z-10 text-center">
-                      <span className="text-[7.5px] font-mono text-purple-400 tracking-widest font-black uppercase">¿NO TIENES CÓDIGO QR?</span>
+                    <div className="w-full max-w-[310px] bg-[#120f18] border-2 border-purple-500/40 rounded-xl p-3 flex flex-col gap-2 z-10 text-center shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+                      <span className="text-[8px] font-mono text-purple-400 tracking-widest font-black uppercase">SALA DE ENTRENAMIENTO</span>
                       
-                      <div className="p-2 bg-purple-950/20 border border-purple-500/10 rounded-lg">
-                        <p className="text-[9px] text-gray-300 leading-normal font-sans">
-                          Los alumnos pueden practicar y los padres probar el juego de inmediato sin usar códigos de maestro.
-                        </p>
-                      </div>
-
-                      {/* Blinking Button mockup */}
+                      {/* Interactive mock button */}
                       <motion.div 
                         animate={isPlaying ? {
-                          scale: [1, 1.02, 1],
+                          scale: [1, 1.03, 1],
                           boxShadow: [
                             "0 0 0px rgba(168,85,247,0)", 
-                            "0 0 15px rgba(168,85,247,0.3)", 
+                            "0 0 15px rgba(168,85,247,0.4)", 
                             "0 0 0px rgba(168,85,247,0)"
                           ]
                         } : {}}
                         transition={{ duration: 2, repeat: Infinity }}
-                        className="py-2.5 rounded-lg bg-gradient-to-r from-purple-900/60 to-purple-800/40 text-purple-200 border border-purple-500/50 text-[10px] font-serif font-black tracking-wider flex items-center justify-center gap-1.5"
+                        className="py-2 rounded-lg bg-gradient-to-r from-purple-800 to-purple-600 text-white border border-purple-400/50 text-[10px] font-serif font-black tracking-wider flex items-center justify-center gap-1.5"
                       >
-                        <Sparkles size={11} className="text-purple-300 animate-pulse" />
+                        <Sparkles size={11} className="text-yellow-300 animate-spin" />
                         <span>📚 SALA DE PRÁCTICA (SIN QR)</span>
                       </motion.div>
 
+                      {/* Explicit Explanations List inside the player box */}
+                      <div className="text-left bg-black/50 border border-white/5 rounded-lg p-2 space-y-1.5">
+                        <div className="flex gap-1.5 items-start">
+                          <span className="text-[10px] leading-none shrink-0">👪</span>
+                          <p className="text-[8.5px] text-gray-300 leading-snug font-sans">
+                            <strong>Para Padres:</strong> Conozcan las mecánicas y repasen el álgebra junto a sus hijos de forma relajada y divertida.
+                          </p>
+                        </div>
+                        <div className="flex gap-1.5 items-start">
+                          <span className="text-[10px] leading-none shrink-0">🛡️</span>
+                          <p className="text-[8.5px] text-gray-300 leading-snug font-sans">
+                            <strong>Cero Riesgo:</strong> El examen oficial con QR permite solo <strong>1 intento</strong>. ¡Practiquen aquí antes de ingresar!
+                          </p>
+                        </div>
+                        <div className="flex gap-1.5 items-start">
+                          <span className="text-[10px] leading-none shrink-0">🔄</span>
+                          <p className="text-[8.5px] text-gray-300 leading-snug font-sans">
+                            <strong>Intentos Infinitos:</strong> El juego funciona idéntico, pero no guarda notas en el servidor. ¡Jueguen mil veces!
+                          </p>
+                        </div>
+                      </div>
+
                       <div className="flex items-center justify-center gap-1 text-[8px] text-white/40 font-mono">
                         <Shield size={9} className="text-purple-400" />
-                        <span>No guarda datos en el servidor • Ideal para calentar</span>
+                        <span>Protección de Calificaciones Oficiales</span>
                       </div>
                     </div>
                   </motion.div>
