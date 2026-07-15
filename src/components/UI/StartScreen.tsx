@@ -496,9 +496,49 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     setFileError('');
 
     try {
+      // Preprocess image to downscale high resolution tablet photos for robust QR detection
+      const processedBlob = await new Promise<Blob | File>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const MAX_DIM = 1024;
+            let width = img.width;
+            let height = img.height;
+            if (width > MAX_DIM || height > MAX_DIM) {
+              if (width > height) {
+                height = Math.round((height * MAX_DIM) / width);
+                width = MAX_DIM;
+              } else {
+                width = Math.round((width * MAX_DIM) / height);
+                height = MAX_DIM;
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob((blob) => {
+                  resolve(blob || file);
+                }, 'image/jpeg', 0.85);
+              } else {
+                resolve(file);
+              }
+            } else {
+              resolve(file);
+            }
+          };
+          img.onerror = () => resolve(file);
+          img.src = event.target?.result as string;
+        };
+        reader.onerror = () => resolve(file);
+        reader.readAsDataURL(file);
+      });
+
       // Initialize a temporary file scanner on dummy div
       const fileScanner = new Html5Qrcode("qr-file-detector-dummy");
-      const decodedText = await fileScanner.scanFile(file, false);
+      const decodedText = await fileScanner.scanFile(processedBlob as File, false);
       
       onSuccessRef.current(decodedText);
     } catch (err: any) {
@@ -516,7 +556,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-center p-4 backdrop-blur-xl shrink-0 overflow-y-auto"
     >
-      <div id="qr-file-detector-dummy" className="hidden" />
+      <div id="qr-file-detector-dummy" className="absolute top-0 left-0 w-0 h-0 opacity-0 pointer-events-none" />
 
       <div className="w-full max-w-sm text-center flex flex-col items-center mt-2 space-y-1">
         <span className="text-[10px] text-orange-500 font-extrabold tracking-[0.3em] uppercase block">Lector de Credenciales QR</span>

@@ -551,6 +551,90 @@ DIAPOSITIVA 7: Implementación Escolar
     playClickSound();
   };
 
+  const handlePrintPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Por favor habilita las ventanas emergentes (popups) para poder exportar el manual en formato PDF.");
+      return;
+    }
+
+    // Custom high-fidelity markdown parser for printable HTML page structure
+    let htmlContent = MANUAL_TEXT
+      .replace(/^# (.*$)/gim, '<h1 class="text-3xl font-serif font-black text-amber-900 border-b-4 border-amber-600 pb-2.5 mb-6 uppercase tracking-wider leading-tight">$1</h1>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-serif font-bold text-amber-800 border-b border-amber-200 pb-1.5 mt-8 mb-4 uppercase leading-tight">$1</h2>')
+      .replace(/^### (.*$)/gim, '<h3 class="text-md font-sans font-extrabold text-slate-700 mt-5 mb-2">$1</h3>')
+      .replace(/^\* \*\*(.*?)\*\* (.*$)/gim, '<li class="ml-5 mb-2 text-xs sm:text-sm leading-relaxed text-slate-800"><strong class="text-amber-900 font-bold">$1</strong> $2</li>')
+      .replace(/^\* (.*$)/gim, '<li class="ml-5 mb-2 text-xs sm:text-sm leading-relaxed text-slate-800">$1</li>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/---/g, '<hr class="my-6 border-amber-200" />')
+      .split('\n')
+      .map(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('<h') || trimmed.startsWith('<li') || trimmed.startsWith('<hr')) return trimmed;
+        return `<p class="text-slate-800 leading-relaxed text-xs sm:text-sm mb-4">${trimmed}</p>`;
+      })
+      .join('\n');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Manual de Usuario - Crónicas de Álgebra: El Templo de los Sabios</title>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+            }
+            h1, h2 {
+              font-family: 'Playfair Display', serif;
+            }
+            @media print {
+              body {
+                background: white;
+                color: black;
+                padding: 0;
+              }
+              .no-print {
+                display: none !important;
+              }
+              .print-container {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+              }
+            }
+          </style>
+        </head>
+        <body class="bg-amber-50/10 p-4 sm:p-8 max-w-4xl mx-auto">
+          <div class="no-print bg-amber-600/10 border border-amber-600/20 p-4 rounded-2xl mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div>
+              <p class="text-amber-900 font-black text-xs sm:text-sm tracking-wider uppercase">🖨️ Generador de PDF Escolar</p>
+              <p class="text-[10px] sm:text-xs text-slate-600">Para guardar este manual en tu dispositivo, selecciona <strong>"Guardar como PDF"</strong> en el destino de tu impresora.</p>
+            </div>
+            <button onclick="window.print()" class="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-[10px] sm:text-xs font-black rounded-xl uppercase tracking-widest shadow-lg shadow-orange-500/10 transition-all cursor-pointer">
+              Guardar como PDF / Imprimir
+            </button>
+          </div>
+          <div class="print-container bg-white p-6 sm:p-12 border border-slate-200/60 shadow-xl rounded-3xl">
+            ${htmlContent}
+          </div>
+          <script>
+            // Automatically prompt the print/save dialogue
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    playClickSound();
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-3 sm:p-6 overflow-hidden">
       <motion.div 
@@ -579,6 +663,17 @@ DIAPOSITIVA 7: Implementación Escolar
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Download PDF Button */}
+            <button
+              onClick={handlePrintPDF}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg transition-all cursor-pointer"
+              title="Exportar Manual de Usuario a un archivo PDF imprimible"
+              id="btn-print-pdf"
+            >
+              <FileText size={12} className="text-amber-400 animate-pulse" />
+              <span>Guardar PDF</span>
+            </button>
+
             {/* Download Manual Button */}
             <button
               onClick={handleDownloadManual}

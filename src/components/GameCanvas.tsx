@@ -93,10 +93,10 @@ export default function GameCanvas() {
     >
       <div className="w-full h-full bg-black">
         <Canvas 
-          dpr={graphicsQuality === 'high' ? [1, 1.5] : 0.85}
-          shadows={graphicsQuality === 'high' ? { type: THREE.PCFShadowMap } : false}
+          dpr={[1, 1.25]}
+          shadows
           gl={{ 
-            antialias: graphicsQuality === 'high', 
+            antialias: true, 
             powerPreference: 'high-performance'
           }}
         >
