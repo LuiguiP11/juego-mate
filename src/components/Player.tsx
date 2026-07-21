@@ -25,6 +25,7 @@ export default function Player() {
   const gender = useGameStore((state) => state.gender);
   const phase = useGameStore((state) => state.phase);
   const currentLevel = useGameStore((state) => state.currentLevel);
+  const retries = useGameStore((state) => state.retries);
   
   const [, getKeys] = useKeyboardControls();
   const isMale = gender === 'male';
@@ -34,7 +35,7 @@ export default function Player() {
   const position = useRef(new THREE.Vector3(0, 0.5, 0));
   const timeRef = useRef(0);
 
-  // Reset position on level change
+  // Reset position on level change or retry
   useEffect(() => {
     position.current.set(0, 0.5, 0);
     velocity.current.set(0, 0, 0);
@@ -42,7 +43,7 @@ export default function Player() {
         group.current.position.set(0, 0.5, 0);
         group.current.rotation.y = 0;
     }
-  }, [currentLevel]);
+  }, [currentLevel, retries]);
   const GRAVITY = 0.006;
   const MOVE_SPEED = 0.08;
   const JUMP_FORCE = 0.14;
@@ -152,8 +153,11 @@ export default function Player() {
         // Proximity for interaction (Centered at x: 0, and relative z: 1.2 from gate)
         // Actual marker Z is gateZ + 1.2
         const markerZ = gateZ + 1.2;
-        const dist = Math.sqrt(Math.pow(position.current.x, 2) + Math.pow(position.current.z - markerZ, 2));
-        if (dist < 2.0 && !isSolved) {
+        // High-precision corridor proximity check: check Z distance primarily since corridor is narrow,
+        // and allow interaction no matter where they stand horizontally (X axis) in the corridor.
+        const zDist = Math.abs(position.current.z - markerZ);
+        const xDist = Math.abs(position.current.x);
+        if (zDist < 2.3 && xDist < 2.0 && !isSolved) {
             foundGate = i;
         }
 

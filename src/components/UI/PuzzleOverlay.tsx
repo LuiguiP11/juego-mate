@@ -95,7 +95,7 @@ export default function PuzzleOverlay() {
   // Use the puzzle according to current progress (score) from the dynamically selected active puzzles
   const puzzle = activePuzzles && activePuzzles.length > 0
     ? activePuzzles[Math.min(score, activePuzzles.length - 1)]
-    : level.puzzles[Math.min(score, level.puzzles.length - 1)]; 
+    : (level && level.puzzles && level.puzzles.length > 0 ? level.puzzles[Math.min(score, level.puzzles.length - 1)] : null); 
   
   const maxTime = currentLevel === 4 ? 240 : 150; // 4 minutes (240s) for level 5, 2.5 minutes (150s) for others
   const [result, setResult] = useState<'none' | 'correct' | 'wrong'>('none');
@@ -109,7 +109,7 @@ export default function PuzzleOverlay() {
   const [eliminatedIndices, setEliminatedIndices] = useState<number[]>([]);
 
   useEffect(() => {
-    if (result !== 'none') return;
+    if (result !== 'none' || !puzzle) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -126,6 +126,22 @@ export default function PuzzleOverlay() {
 
     return () => clearInterval(timer);
   }, [result, puzzle, maxTime, recordAttempt]);
+
+  if (!puzzle) {
+    return (
+      <div className="fixed inset-0 z-[400] flex items-center justify-center bg-[#0b0805]/95 backdrop-blur-md p-4">
+        <div className="text-center space-y-4">
+          <p className="text-white font-serif text-lg font-black uppercase tracking-wider animate-pulse">Cargando desafío...</p>
+          <button 
+            onClick={() => useGameStore.getState().setPhase('playing')}
+            className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white font-mono text-xs font-black uppercase rounded-xl border border-orange-500/30 shadow-lg cursor-pointer hover:scale-105 transition-all"
+          >
+            Volver al Templo
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleAnswer = (ans: string, idx: number) => {
     if (result !== 'none') return;

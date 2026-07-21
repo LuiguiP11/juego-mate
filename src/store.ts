@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { db } from './firebase';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { getPuzzleSubcategory } from './utils/mathUtils';
 
 export type GamePhase = 'start' | 'intro' | 'playing' | 'puzzle' | 'victory' | 'gameover' | 'certificate' | 'practice';
@@ -34,6 +34,7 @@ interface GameState {
   retries: number;
   playerName: string;
   playerUser: string;
+  intentosJugados: number;
   playerGrade: string;
   playerNombre: string;
   playerApellido: string;
@@ -94,6 +95,7 @@ interface GameState {
   useRetry: () => boolean;
   addInventory: (item: string) => void;
   toggleMute: () => void;
+  setIntentosJugados: (val: number) => void;
   saveScoreToFirebase: (levelIndex: number, scoreValue: number) => Promise<boolean>;
 }
 
@@ -291,6 +293,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   retries: 3,
   playerName: '',
   playerUser: '',
+  intentosJugados: 1,
   playerGrade: '',
   playerNombre: '',
   playerApellido: '',
@@ -400,6 +403,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   })),
 
   toggleMute: () => set((state) => ({ muted: !state.muted })),
+
+  setIntentosJugados: (val) => set({ intentosJugados: val }),
   
   solvePuzzle: (correct) => {
     if (correct) {
@@ -555,6 +560,18 @@ export const useGameStore = create<GameState>((set, get) => ({
     try {
       const docRef = doc(db, 'notas', docId);
       
+      let finalPunteo = scoreValue;
+      try {
+        const scoreDocSnap = await getDoc(docRef);
+        if (scoreDocSnap.exists()) {
+          const data = scoreDocSnap.data();
+          const existingPunteo = data.punteo ?? 0;
+          finalPunteo = Math.max(existingPunteo, scoreValue);
+        }
+      } catch (e) {
+        console.warn("Could not check previous score, using current value:", e);
+      }
+
       const docData = {
         usuario: playerUser,
         nombre: playerNombre,
@@ -562,10 +579,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         grado: playerGradoSolo,
         seccion: playerSeccionSolo,
         actividad: "Tarea 3: Juego Algebra",
-        punteo: scoreValue, // Reflection of total cumulative points (2, 4, 6, 8, or 10)
+        punteo: finalPunteo, // Reflection of total cumulative points (2, 4, 6, 8, or 10)
         unidad: cleanUnidad,
         trimestre: cleanUnidad.toUpperCase(),
         fecha: formattedDate,
+        intentos_jugados: get().intentosJugados,
         timestamp: serverTimestamp()
       };
 

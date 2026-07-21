@@ -9,7 +9,7 @@ import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Tr
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebase';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import VideoTutorialModal from './VideoTutorialModal';
 import GamePresentationModal from './GamePresentationModal';
 
@@ -520,7 +520,12 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
               if (ctx) {
                 ctx.drawImage(img, 0, 0, width, height);
                 canvas.toBlob((blob) => {
-                  resolve(blob || file);
+                  if (blob) {
+                    const finalFile = new File([blob], file.name, { type: 'image/jpeg' });
+                    resolve(finalFile);
+                  } else {
+                    resolve(file);
+                  }
                 }, 'image/jpeg', 0.85);
               } else {
                 resolve(file);
@@ -741,6 +746,7 @@ export default function StartScreen() {
     gradoSolo: string;
     seccionSolo: string;
     clave: string;
+    intentosJugados: number;
   } | null>(null);
 
   // Floating confirmation window state
@@ -754,14 +760,62 @@ export default function StartScreen() {
     gradoSolo: string;
     seccionSolo: string;
     clave: string;
+    intentosJugados: number;
   } | null>(null);
 
   const [showVideoTutorial, setShowVideoTutorial] = useState(false);
   const [showGamePresentation, setShowGamePresentation] = useState(false);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     if (validatedStudent) {
       console.log("Iniciando aventura con estudiante ya verificado:", validatedStudent);
+      
+      const cleanUnidad = "t2";
+      const cleanActividadId = "juego_algebra";
+      const scoreDocId = `${validatedStudent.userName.toLowerCase().trim()}_${cleanUnidad}_${cleanActividadId}`;
+      const scoreDocRef = doc(db, 'notas', scoreDocId);
+      
+      let nextIntentos = validatedStudent.intentosJugados + 1;
+      
+      try {
+        // Retrieve the latest doc from Firestore to prevent race conditions or duplicate starts
+        const scoreDocSnap = await getDoc(scoreDocRef);
+        if (scoreDocSnap.exists()) {
+          const data = scoreDocSnap.data();
+          const currentSavedAttempts = data.intentos_jugados ?? 1;
+          nextIntentos = currentSavedAttempts + 1;
+          
+          // Increment the attempts field on start
+          await setDoc(scoreDocRef, {
+            ...data,
+            intentos_jugados: nextIntentos,
+            timestamp: serverTimestamp()
+          }, { merge: true });
+        } else {
+          nextIntentos = 1;
+          // Create the document with punteo: 0 and intentos_jugados: 1
+          await setDoc(scoreDocRef, {
+            usuario: validatedStudent.userName,
+            nombre: validatedStudent.nombre,
+            apellido: validatedStudent.apellido,
+            grado: validatedStudent.gradoSolo,
+            seccion: validatedStudent.seccionSolo,
+            actividad: "Tarea 3: Juego Algebra",
+            punteo: 0,
+            unidad: cleanUnidad,
+            trimestre: cleanUnidad.toUpperCase(),
+            fecha: new Date().toISOString().split('T')[0],
+            intentos_jugados: 1,
+            timestamp: serverTimestamp()
+          });
+        }
+      } catch (err) {
+        console.warn("Error incrementing intentos_jugados in Firestore:", err);
+      }
+
+      // Sync with Zustand store
+      useGameStore.getState().setIntentosJugados(nextIntentos);
+
       setPlayerInfo(
         validatedStudent.fullName, 
         validatedStudent.userName, 
@@ -827,7 +881,7 @@ export default function StartScreen() {
           }
         }
 
-        // Check if student has already registered a score in the 'notas' collection (only 1 attempt allowed)
+        // Check if student has already registered a score in the 'notas' collection (only up to 3 attempts allowed)
         // Exempt Linday Torres (linday.torres) from this restriction so she can demo as many times as needed
         const cleanUnidad = "t2";
         const cleanActividadId = "juego_algebra";
@@ -835,14 +889,18 @@ export default function StartScreen() {
         
         let alreadyAttempted = false;
         let existingScore = 0;
+        let intentosJugados = 0;
         
         if (dbUsuario.toLowerCase().trim() !== 'linday.torres') {
           try {
             const scoreDocSnap = await getDoc(doc(db, 'notas', scoreDocId));
             if (scoreDocSnap.exists()) {
-              alreadyAttempted = true;
               const data = scoreDocSnap.data();
+              intentosJugados = data.intentos_jugados ?? 1;
               existingScore = data.punteo ?? 0;
+              if (intentosJugados >= 3) {
+                alreadyAttempted = true;
+              }
             }
           } catch (e) {
             console.warn("Error checking existing score:", e);
@@ -850,7 +908,7 @@ export default function StartScreen() {
         }
 
         if (alreadyAttempted) {
-          setError(`Acceso denegado: El alumno "${fullName}" ya ha registrado su intento en la base de datos "mate-experimental" con un punteo de ${existingScore}/10. Solo se permite una oportunidad por estudiante.`);
+          setError(`Acceso denegado: El alumno "${fullName}" ya ha registrado su intento en la base de datos "mate-experimental" con un punteo de ${existingScore}/10 y ha completado sus 3 oportunidades permitidas.`);
           setVerifying(false);
           return;
         }
@@ -874,7 +932,8 @@ export default function StartScreen() {
           apellido: apellidoPart,
           gradoSolo,
           seccionSolo,
-          clave: String(studentClave)
+          clave: String(studentClave),
+          intentosJugados
         });
         setError('');
       } else {
@@ -1020,6 +1079,10 @@ export default function StartScreen() {
                     <span className="bg-white/5 px-2 py-0.5 rounded">Sección {validatedStudent.seccionSolo}</span>
                   )}
                   <span className="bg-white/5 px-2 py-0.5 rounded">Clave: {validatedStudent.clave}</span>
+                </div>
+
+                <div className="mt-1 bg-orange-500/10 border border-orange-500/20 rounded px-2.5 py-1 text-[8px] sm:text-[10px] text-orange-400 font-mono font-bold">
+                  Oportunidades: {validatedStudent.intentosJugados} / 3 usadas
                 </div>
 
                 <p className="text-[6.5px] sm:text-[8px] text-yellow-500 leading-none tracking-widest font-extrabold uppercase mt-1 sm:mt-2 animate-pulse">
@@ -1397,6 +1460,21 @@ export default function StartScreen() {
                   <span className="text-orange-400 font-extrabold uppercase tracking-widest text-[7px] sm:text-[8px]">Clave</span>
                   <span className="text-white font-bold text-xs sm:text-sm">{pendingStudent.clave}</span>
                 </div>
+              </div>
+
+              {/* Opportunities Status Card */}
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3.5 text-center space-y-1">
+                <span className="text-orange-400 font-extrabold uppercase tracking-widest text-[7px] sm:text-[8px] block">Estado de Oportunidades</span>
+                <p className="text-white font-bold text-xs sm:text-sm font-sans">
+                  {pendingStudent.intentosJugados === 0 
+                    ? "¡Tienes las 3 oportunidades disponibles!" 
+                    : pendingStudent.intentosJugados === 1
+                    ? "Has usado 1 de tus 3 oportunidades. ¡Puedes jugar de nuevo para mejorar tu nota!"
+                    : "Has usado 2 de tus 3 oportunidades. ¡Esta es tu ÚLTIMA oportunidad!"}
+                </p>
+                <p className="text-white/40 text-[8px] sm:text-[9.5px] leading-tight">
+                  El sistema mantendrá automáticamente la calificación MÁXIMA que logres obtener en cualquiera de tus intentos.
+                </p>
               </div>
 
               {/* Action Buttons */}
