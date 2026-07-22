@@ -301,7 +301,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     onErrorRef.current = onError;
   });
 
-  // Load cameras once on mount
+  // Load cameras once on mount & check permissions
   useEffect(() => {
     let isMounted = true;
     
@@ -311,7 +311,6 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         if (isMounted && listedCameras && listedCameras.length > 0) {
           setCameras(listedCameras);
           
-          // Select best initial camera
           let selected = listedCameras.find(c => {
             const label = c.label.toLowerCase();
             const isRear = label.includes('back') || label.includes('rear') || label.includes('trasera') || label.includes('entorno');
@@ -344,6 +343,35 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     };
   }, []);
 
+  const requestCameraPermissionAndStart = async () => {
+    setCameraError('');
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const listed = await Html5Qrcode.getCameras();
+      if (listed && listed.length > 0) {
+        setCameras(listed);
+        const rear = listed.find(c => {
+          const l = c.label.toLowerCase();
+          return l.includes('back') || l.includes('rear') || l.includes('trasera') || l.includes('entorno');
+        });
+        setActiveCameraId(rear ? rear.id : listed[0].id);
+      }
+    } catch (err: any) {
+      console.error("Camera permission request failed:", err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError("El permiso de la cámara fue denegado. Haz clic en el icono de candado o configuración de tu navegador para permitir la cámara.");
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setCameraError("No se encontró ninguna cámara en este dispositivo. Puedes usar la pestaña 'Subir Imagen' con la foto de tu QR.");
+      } else {
+        setCameraError("No se pudo iniciar la cámara: " + (err.message || "Error de permisos") + ". Usa 'Subir Imagen' como alternativa.");
+      }
+    }
+  };
+
   // Main scanner lifecycle controlled by activeCameraId and activeTab
   useEffect(() => {
     if (activeTab !== 'camera') return;
@@ -352,7 +380,6 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     let scanner: Html5Qrcode | null = null;
 
     const startScanner = async () => {
-      // 1. Give DOM 350ms to mount '#qr-reader' safely
       await new Promise((resolve) => setTimeout(resolve, 350));
       if (!isMounted) return;
 
@@ -366,20 +393,33 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         scanner = new Html5Qrcode("qr-reader");
         html5QrCodeRef.current = scanner;
 
-        // Dynamic scanner box (70% of minimum viewfinder edge) for high precision on small phone screens
-        const qrBoxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const qrboxSize = Math.floor(minEdge * 0.7);
-          return {
-            width: qrboxSize,
-            height: qrboxSize
-          };
+        const config = {
+          fps: 20,
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const qrboxSize = Math.floor(minEdge * 0.85);
+            return {
+              width: qrboxSize,
+              height: qrboxSize
+            };
+          },
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
         };
 
-        const config = {
-          fps: 15, // Extremely lightweight and reliable scanning rate for all mobile devices
-          qrbox: qrBoxFunction,
-          aspectRatio: undefined // Native aspect ratio prevents stretching
+        const handleScan = async (decodedText: string) => {
+          if (isMounted) {
+            if (scanner && scanner.isScanning) {
+              try {
+                await scanner.stop();
+              } catch (e) {
+                console.error("Error al apagar el escáner:", e);
+              }
+            }
+            html5QrCodeRef.current = null;
+            onSuccessRef.current(decodedText);
+          }
         };
 
         if (activeCameraId) {
@@ -387,48 +427,43 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
           await scanner.start(
             activeCameraId,
             config,
-            async (decodedText) => {
-              if (isMounted) {
-                // Turn off camera stream completely BEFORE closing the React modal overlay to avoid corruption/freezing
-                if (scanner && scanner.isScanning) {
-                  try {
-                    await scanner.stop();
-                  } catch (e) {
-                    console.error("Error al apagar el escáner:", e);
-                  }
-                }
-                html5QrCodeRef.current = null;
-                onSuccessRef.current(decodedText);
-              }
-            },
-            () => {} // Silent search frame (ignore partial non-match reads)
+            handleScan,
+            () => {}
           );
         } else {
           console.log("Starting QR scanner with facingMode fallback...");
           await scanner.start(
             { facingMode: "environment" },
             config,
-            async (decodedText) => {
-              if (isMounted) {
-                // Turn off camera stream completely BEFORE closing the React modal overlay to avoid corruption/freezing
-                if (scanner && scanner.isScanning) {
-                  try {
-                    await scanner.stop();
-                  } catch (e) {
-                    console.error("Error al apagar el escáner:", e);
-                  }
-                }
-                html5QrCodeRef.current = null;
-                onSuccessRef.current(decodedText);
-              }
-            },
+            handleScan,
             () => {}
           );
+        }
+
+        try {
+          const listed = await Html5Qrcode.getCameras();
+          if (isMounted && listed && listed.length > 0) {
+            setCameras(listed);
+            if (!activeCameraId) {
+              const rear = listed.find(c => {
+                const l = c.label.toLowerCase();
+                return l.includes('back') || l.includes('rear') || l.includes('trasera') || l.includes('entorno');
+              });
+              setActiveCameraId(rear ? rear.id : listed[0].id);
+            }
+          }
+        } catch (e) {
+          // Ignore
         }
       } catch (err: any) {
         console.error("Camera boot failed:", err);
         if (isMounted) {
-          const fallbackMessage = "No se pudo encender la cámara de forma directa. Concede permisos de cámara al navegador o usa el lector de archivos abajo.";
+          let fallbackMessage = "No se pudo encender la cámara.";
+          if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError' || String(err).includes('Permission')) {
+            fallbackMessage = "El permiso de la cámara fue denegado por el navegador. Por favor otorga permisos o usa la pestaña 'Subir Imagen'.";
+          } else {
+            fallbackMessage = "Concede permisos de cámara al navegador o usa la pestaña 'Subir Imagen'.";
+          }
           setCameraError(fallbackMessage);
         }
       }
@@ -495,62 +530,89 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     setFileScanning(true);
     setFileError('');
 
+    let fileScanner: Html5Qrcode | null = null;
     try {
-      // Preprocess image to downscale high resolution tablet photos for robust QR detection
-      const processedBlob = await new Promise<Blob | File>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => {
-            const MAX_DIM = 1024;
-            let width = img.width;
-            let height = img.height;
-            if (width > MAX_DIM || height > MAX_DIM) {
-              if (width > height) {
-                height = Math.round((height * MAX_DIM) / width);
-                width = MAX_DIM;
-              } else {
-                width = Math.round((width * MAX_DIM) / height);
-                height = MAX_DIM;
+      fileScanner = new Html5Qrcode("qr-file-detector-dummy");
+      
+      let decodedText: string | null = null;
+
+      // 1st Attempt: Scan original raw file directly without quality loss or compression artifacts
+      try {
+        decodedText = await fileScanner.scanFile(file, false);
+      } catch (err1) {
+        console.log("Direct raw file scan failed, trying high-res crisp PNG canvas preprocess...", err1);
+      }
+
+      // 2nd Attempt: Preprocess on high quality canvas if raw scan failed
+      if (!decodedText) {
+        const processedFile = await new Promise<File>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const MAX_DIM = 1600;
+              let width = img.width;
+              let height = img.height;
+              if (width > MAX_DIM || height > MAX_DIM) {
+                if (width > height) {
+                  height = Math.round((height * MAX_DIM) / width);
+                  width = MAX_DIM;
+                } else {
+                  width = Math.round((width * MAX_DIM) / height);
+                  height = MAX_DIM;
+                }
               }
               const canvas = document.createElement('canvas');
               canvas.width = width;
               canvas.height = height;
               const ctx = canvas.getContext('2d');
               if (ctx) {
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0, width, height);
                 canvas.toBlob((blob) => {
                   if (blob) {
-                    const finalFile = new File([blob], file.name, { type: 'image/jpeg' });
-                    resolve(finalFile);
+                    resolve(new File([blob], file.name, { type: 'image/png' }));
                   } else {
                     resolve(file);
                   }
-                }, 'image/jpeg', 0.85);
+                }, 'image/png');
               } else {
                 resolve(file);
               }
-            } else {
-              resolve(file);
-            }
+            };
+            img.onerror = () => resolve(file);
+            img.src = event.target?.result as string;
           };
-          img.onerror = () => resolve(file);
-          img.src = event.target?.result as string;
-        };
-        reader.onerror = () => resolve(file);
-        reader.readAsDataURL(file);
-      });
+          reader.onerror = () => resolve(file);
+          reader.readAsDataURL(file);
+        });
 
-      // Initialize a temporary file scanner on dummy div
-      const fileScanner = new Html5Qrcode("qr-file-detector-dummy");
-      const decodedText = await fileScanner.scanFile(processedBlob as File, false);
-      
-      onSuccessRef.current(decodedText);
+        try {
+          decodedText = await fileScanner.scanFile(processedFile, false);
+        } catch (err2) {
+          console.log("Processed PNG file scan failed:", err2);
+        }
+      }
+
+      if (decodedText) {
+        onSuccessRef.current(decodedText);
+      } else {
+        setFileError("No se encontró ningún código QR en la imagen. Asegúrate de que la foto esté bien iluminada y el código QR se vea completo.");
+      }
     } catch (err: any) {
-      console.error("File QR reading failed:", err);
-      setFileError("No se encontró ningún código QR en la imagen. Asegúrate de que la foto sea clara y esté bien enfocada.");
+      console.error("File QR reading error:", err);
+      setFileError("Error al procesar la imagen. Intenta con otra foto o escanea con la cámara.");
     } finally {
+      if (fileScanner) {
+        try {
+          await fileScanner.clear();
+        } catch (e) {
+          // Ignore clear errors
+        }
+      }
       setFileScanning(false);
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -559,7 +621,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-center p-4 backdrop-blur-xl shrink-0 overflow-y-auto"
+      className="fixed inset-0 z-[300] bg-[#0b0805]/98 flex flex-col items-center justify-start sm:justify-center p-3 sm:p-6 backdrop-blur-xl overflow-y-auto"
     >
       <div id="qr-file-detector-dummy" className="absolute top-0 left-0 w-0 h-0 opacity-0 pointer-events-none" />
 
@@ -623,19 +685,27 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         {activeTab === 'camera' ? (
           cameraError ? (
             <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
-              <Camera size={32} className="text-neutral-600 mb-2" />
-              <p className="text-white/70 text-[10px] sm:text-xs font-semibold leading-relaxed">
-                No se pudo activar la cámara de forma directa.
+              <Camera size={32} className="text-orange-500 mb-2 animate-bounce" />
+              <p className="text-white/90 text-xs font-bold leading-relaxed">
+                Permiso de Cámara Requerido
               </p>
-              <p className="text-neutral-500 text-[9px] mt-1 leading-relaxed max-w-[95%]">
+              <p className="text-neutral-400 text-[9px] sm:text-[10px] mt-1 leading-relaxed max-w-[95%]">
                 {cameraError}
               </p>
-              <button 
-                onClick={() => setActiveTab('file')}
-                className="mt-4 px-4 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-[9px] font-black uppercase rounded-lg border border-orange-500/30 transition-all"
-              >
-                Cambiar a Subir Imagen
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-2 mt-4">
+                <button 
+                  onClick={requestCameraPermissionAndStart}
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white text-[10px] font-black uppercase tracking-wider rounded-xl shadow-lg transition-all active:scale-95 border border-orange-400/30 cursor-pointer"
+                >
+                  Solicitar Permiso de Cámara
+                </button>
+                <button 
+                  onClick={() => setActiveTab('file')}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 text-[10px] font-black uppercase tracking-wider rounded-xl border border-white/20 transition-all cursor-pointer"
+                >
+                  Usar Subir Imagen
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -1030,14 +1100,14 @@ export default function StartScreen() {
         <div className="absolute inset-0 bg-black/40" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center p-3 sm:p-10 lg:p-20 overflow-x-hidden justify-center">
+      <div className="relative z-10 min-h-full py-6 px-3 sm:px-6 flex flex-col items-center justify-start sm:justify-center overflow-x-hidden my-auto w-full">
         {/* Decorative Floating Elements */}
         <div className="absolute top-20 left-10 w-32 h-32 bg-orange-500/20 blur-[60px] rounded-full animate-pulse" />
         <div className="absolute bottom-20 right-10 w-48 h-48 bg-purple-500/20 blur-[80px] rounded-full animate-pulse delay-700" />
         <div className="absolute top-1/2 left-1/4 animate-rune font-serif text-5xl text-white select-none pointer-events-none -rotate-12 opacity-60">∫</div>
         <div className="absolute top-1/3 right-1/4 animate-rune delay-700 font-serif text-5xl text-white select-none pointer-events-none rotate-12 opacity-60">√</div>
         <div className="absolute bottom-1/3 left-1/3 animate-rune delay-1000 font-serif text-3xl text-white select-none pointer-events-none rotate-45 opacity-60">π</div>
-        <header className="text-center mb-5 sm:mb-8 px-4 relative mt-2">
+        <header className="text-center mb-4 sm:mb-8 px-2 relative mt-2 shrink-0">
           <motion.div
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -1062,7 +1132,7 @@ export default function StartScreen() {
           </div>
         </header>
 
-        <div className="w-[94%] sm:w-full max-w-sm bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-[2rem] p-3 sm:p-6 space-y-3 sm:space-y-5 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+        <div className="w-full max-w-sm sm:max-w-md bg-white/[0.03] backdrop-blur-3xl border border-white/10 rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 space-y-3 sm:space-y-5 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
           <div className="space-y-2">
             {validatedStudent ? (
               <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 sm:p-4 flex flex-col items-center gap-1 sm:gap-2 text-center shadow-lg relative overflow-hidden">
