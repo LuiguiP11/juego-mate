@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { QrCode, Play, Camera, Star, Sword, Shield, ChevronRight, User, Lock, Trophy, Upload, RefreshCw, BookOpen, Video, Presentation } from 'lucide-react';
 import { useGameStore, LEVELS } from '../../store';
 import { Html5Qrcode } from 'html5-qrcode';
+import jsQR from 'jsqr';
 import { db } from '../../firebase';
 import { collection, query, where, getDocs, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import VideoTutorialModal from './VideoTutorialModal';
@@ -523,6 +524,56 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     onClose();
   };
 
+  const decodeQRWithJsQR = async (file: File): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDims = [1200, 800, 1600, img.width];
+          for (const targetDim of maxDims) {
+            let w = img.width;
+            let h = img.height;
+            if (w > targetDim || h > targetDim) {
+              if (w > h) {
+                h = Math.round((h * targetDim) / w);
+                w = targetDim;
+              } else {
+                w = Math.round((w * targetDim) / h);
+                h = targetDim;
+              }
+            }
+            if (w <= 0 || h <= 0) continue;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) continue;
+
+            ctx.drawImage(img, 0, 0, w, h);
+            const imageData = ctx.getImageData(0, 0, w, h);
+
+            let code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "dontInvert"
+            });
+            if (code && code.data) return resolve(code.data);
+
+            code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: "attemptBoth"
+            });
+            if (code && code.data) return resolve(code.data);
+          }
+          resolve(null);
+        };
+        img.onerror = () => resolve(null);
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -530,68 +581,22 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     setFileScanning(true);
     setFileError('');
 
-    let fileScanner: Html5Qrcode | null = null;
     try {
-      fileScanner = new Html5Qrcode("qr-file-detector-dummy");
-      
-      let decodedText: string | null = null;
+      // 1. Try fast pixel-based jsQR scan on client canvas
+      let decodedText = await decodeQRWithJsQR(file);
 
-      // 1st Attempt: Scan original raw file directly without quality loss or compression artifacts
-      try {
-        decodedText = await fileScanner.scanFile(file, false);
-      } catch (err1) {
-        console.log("Direct raw file scan failed, trying high-res crisp PNG canvas preprocess...", err1);
-      }
-
-      // 2nd Attempt: Preprocess on high quality canvas if raw scan failed
+      // 2. Fallback to html5-qrcode file scanner if jsQR didn't find a code
       if (!decodedText) {
-        const processedFile = await new Promise<File>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-              const MAX_DIM = 1600;
-              let width = img.width;
-              let height = img.height;
-              if (width > MAX_DIM || height > MAX_DIM) {
-                if (width > height) {
-                  height = Math.round((height * MAX_DIM) / width);
-                  width = MAX_DIM;
-                } else {
-                  width = Math.round((width * MAX_DIM) / height);
-                  height = MAX_DIM;
-                }
-              }
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.drawImage(img, 0, 0, width, height);
-                canvas.toBlob((blob) => {
-                  if (blob) {
-                    resolve(new File([blob], file.name, { type: 'image/png' }));
-                  } else {
-                    resolve(file);
-                  }
-                }, 'image/png');
-              } else {
-                resolve(file);
-              }
-            };
-            img.onerror = () => resolve(file);
-            img.src = event.target?.result as string;
-          };
-          reader.onerror = () => resolve(file);
-          reader.readAsDataURL(file);
-        });
-
+        let fileScanner: Html5Qrcode | null = null;
         try {
-          decodedText = await fileScanner.scanFile(processedFile, false);
-        } catch (err2) {
-          console.log("Processed PNG file scan failed:", err2);
+          fileScanner = new Html5Qrcode("qr-file-detector-dummy");
+          decodedText = await fileScanner.scanFile(file, false);
+        } catch (err1) {
+          console.log("Html5Qrcode file scan failed:", err1);
+        } finally {
+          if (fileScanner) {
+            try { await fileScanner.clear(); } catch (e) {}
+          }
         }
       }
 
@@ -604,13 +609,6 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
       console.error("File QR reading error:", err);
       setFileError("Error al procesar la imagen. Intenta con otra foto o escanea con la cámara.");
     } finally {
-      if (fileScanner) {
-        try {
-          await fileScanner.clear();
-        } catch (e) {
-          // Ignore clear errors
-        }
-      }
       setFileScanning(false);
       if (e.target) e.target.value = '';
     }
@@ -625,7 +623,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
     >
       <div id="qr-file-detector-dummy" className="absolute top-0 left-0 w-0 h-0 opacity-0 pointer-events-none" />
 
-      <div className="w-full max-w-sm text-center flex flex-col items-center mt-2 space-y-1">
+      <div className="w-full max-w-sm text-center flex flex-col items-center mt-2 space-y-1 shrink-0">
         <span className="text-[10px] text-orange-500 font-extrabold tracking-[0.3em] uppercase block">Lector de Credenciales QR</span>
         
         {/* Navigation Tabs */}
@@ -653,7 +651,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         </div>
 
         {isInsideIframe && activeTab === 'camera' && (
-          <div className="bg-orange-500/10 border border-orange-500/30 p-2 sm:p-3 rounded-xl max-w-sm text-center mt-2">
+          <div className="bg-orange-500/10 border border-orange-500/30 p-2 sm:p-3 rounded-xl max-w-sm text-center mt-2 shrink-0">
             <p className="text-orange-400 text-[10px] font-black leading-snug">
               ⚠️ Estás jugando dentro de la vista previa (iframe) de Google AI Studio.
             </p>
@@ -664,7 +662,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         )}
 
         {activeTab === 'camera' && cameras.length > 0 && !cameraError && (
-          <div className="mt-2 w-full max-w-[280px] bg-white/5 border border-white/10 rounded-xl p-1 px-2.5 flex items-center gap-2">
+          <div className="mt-2 w-full max-w-[280px] bg-white/5 border border-white/10 rounded-xl p-1 px-2.5 flex items-center gap-2 shrink-0">
             <Camera size={12} className="text-orange-500 shrink-0" />
             <select
               value={activeCameraId}
@@ -681,9 +679,10 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         )}
       </div>
 
-      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border border-white/10 rounded-2xl overflow-hidden mt-5 bg-[#0a0502] flex items-center justify-center">
-        {activeTab === 'camera' ? (
-          cameraError ? (
+      <div className="relative w-full max-w-[340px] sm:max-w-[420px] aspect-[4/3] border border-white/10 rounded-2xl overflow-hidden mt-4 sm:mt-5 bg-[#0a0502] flex items-center justify-center shrink-0">
+        {/* CAMERA VIEW - Stays in DOM at all times so html5-qrcode scanner isn't destroyed mid-stop */}
+        <div className={`w-full h-full relative ${activeTab === 'camera' ? 'block' : 'hidden'}`}>
+          {cameraError ? (
             <div className="absolute inset-0 bg-neutral-900 flex flex-col items-center justify-center p-4 text-center">
               <Camera size={32} className="text-orange-500 mb-2 animate-bounce" />
               <p className="text-white/90 text-xs font-bold leading-relaxed">
@@ -708,50 +707,49 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
               </div>
             </div>
           ) : (
-            <>
-              <div id="qr-reader" className="w-full h-full" />
-            </>
-          )
-        ) : (
-          <div className="w-full h-full p-4 flex flex-col items-center justify-center text-center space-y-4 bg-white/[0.01]">
-            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-orange-400">
-              <Upload size={24} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-white font-bold text-xs sm:text-sm">Sube tu Credencial Sagrada</p>
-              <p className="text-white/40 text-[9px] sm:text-[10px] max-w-[240px] mx-auto leading-relaxed">
-                ¿Tu cámara tiene candado? Sube una foto clara o captura de tu código QR de alumno para abrir las puertas del templo.
-              </p>
-            </div>
+            <div id="qr-reader" className="w-full h-full overflow-hidden" />
+          )}
+        </div>
 
-            <label className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-lg transition-all active:scale-95 inline-flex items-center gap-2 border border-orange-500/30">
-              <Upload size={14} className="text-white" />
-              <span>Cargar Pergamino QR</span>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleFileChange} 
-                disabled={fileScanning}
-                className="hidden" 
-              />
-            </label>
-
-            {fileScanning && (
-              <p className="text-yellow-400 text-[9px] sm:text-[10px] font-bold animate-pulse font-mono uppercase tracking-wider">
-                ⏳ Analizando imagen en busca de QR...
-              </p>
-            )}
-
-            {fileError && (
-              <p className="text-red-400 text-[9px] sm:text-[10px] font-bold max-w-[280px] leading-tight">
-                {fileError}
-              </p>
-            )}
+        {/* FILE UPLOAD VIEW - Stays in DOM at all times */}
+        <div className={`w-full h-full p-4 flex flex-col items-center justify-center text-center space-y-3 bg-white/[0.01] ${activeTab === 'file' ? 'flex' : 'hidden'}`}>
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-orange-400 shrink-0">
+            <Upload size={22} />
           </div>
-        )}
+          <div className="space-y-1">
+            <p className="text-white font-bold text-xs sm:text-sm">Sube tu Credencial Sagrada</p>
+            <p className="text-white/40 text-[9px] sm:text-[10px] max-w-[240px] mx-auto leading-relaxed">
+              Sube una foto o captura clara de tu código QR de alumno para abrir las puertas del templo.
+            </p>
+          </div>
+
+          <label className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-lg transition-all active:scale-95 inline-flex items-center gap-2 border border-orange-500/30">
+            <Upload size={14} className="text-white" />
+            <span>Cargar Pergamino QR</span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleFileChange} 
+              disabled={fileScanning}
+              className="hidden" 
+            />
+          </label>
+
+          {fileScanning && (
+            <p className="text-yellow-400 text-[9px] sm:text-[10px] font-bold animate-pulse font-mono uppercase tracking-wider">
+              ⏳ Analizando imagen en busca de QR...
+            </p>
+          )}
+
+          {fileError && (
+            <p className="text-red-400 text-[9px] sm:text-[10px] font-bold max-w-[280px] leading-tight">
+              {fileError}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-3 w-full max-w-sm">
+      <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3 w-full max-w-sm shrink-0">
         {activeTab === 'camera' && cameras.length > 1 && !cameraError && (
           <button
             onClick={handleSwitchCamera}
@@ -763,7 +761,7 @@ function QRScannerModal({ onSuccess, onClose, onError }: QRScannerModalProps) {
         )}
         <button
           onClick={handleClose}
-          className="px-8 py-3 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.15em] text-[10px] transition-all active:scale-95 cursor-pointer"
+          className="px-8 py-3 bg-red-600/10 border border-red-600/20 text-red-400 hover:text-white hover:bg-red-600 rounded-xl font-black uppercase tracking-[0.1em] text-[10px] transition-all active:scale-95 cursor-pointer"
         >
           Cerrar Lector
         </button>

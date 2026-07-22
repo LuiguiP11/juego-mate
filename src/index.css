@@ -4,26 +4,31 @@
 #qr-reader {
   border: none !important;
   background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 #qr-reader video {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  border-radius: 20px !important;
+  border-radius: 16px !important;
 }
 
 #qr-reader__scan_region {
   background: transparent !important;
   border: none !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 #qr-reader__scan_region svg {
   display: none !important; /* Hide html5-qrcode's default helper SVG frames */
 }
 
-/* Override the built-in border lines that html5-qrcode draws on the canvas if any */
-#qr-reader__scan_region canvas {
+#qr-reader__dashboard,
+#qr-reader__status_span,
+#qr-reader__header_message {
   display: none !important;
 }
 
