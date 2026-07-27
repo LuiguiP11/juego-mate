@@ -45,6 +45,7 @@ interface GameState {
   gender: 'male' | 'female';
   nearGateIndex: number | null;
   inventory: string[];
+  completedLevels: number[];
   muted: boolean;
   totalPoints: number;
   graphicsQuality: 'high' | 'low';
@@ -304,6 +305,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   gender: 'male',
   nearGateIndex: null,
   inventory: [],
+  completedLevels: [],
   muted: false,
   totalPoints: 0,
   graphicsQuality: (typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|Macintosh/i.test(navigator.userAgent)) ? 'low' : 'high',
@@ -416,11 +418,22 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (newScore === 5) {
         const level = LEVELS[currentLevel];
         get().addInventory(level.treasure);
-        // Add 2 points per level won
-        const newTotalPoints = get().totalPoints + 2;
-        set({ score: newScore, totalPoints: newTotalPoints, phase: 'playing' });
+
+        // Track unique completed levels so replaying a level doesn't stack points infinitely
+        const currentCompleted = get().completedLevels || [];
+        const updatedCompletedLevels = Array.from(new Set([...currentCompleted, currentLevel]));
         
-        // Trigger automated saving to Firebase with the cumulative total points
+        // 2 points per unique level completed, max 10 points
+        const newTotalPoints = Math.min(10, updatedCompletedLevels.length * 2);
+
+        set({ 
+          score: newScore, 
+          completedLevels: updatedCompletedLevels,
+          totalPoints: newTotalPoints, 
+          phase: 'playing' 
+        });
+        
+        // Trigger automated saving to Firebase with the cumulative total points (max 10)
         get().saveScoreToFirebase(currentLevel, newTotalPoints);
       } else {
         set({ score: newScore, phase: 'playing' });
@@ -477,6 +490,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       lives: 3, 
       retries: 3,
       inventory: [],
+      completedLevels: [],
       totalPoints: 0,
       activePuzzles,
       attemptHistory: [],
@@ -531,8 +545,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       playerNombre, 
       playerApellido, 
       playerGradoSolo, 
-      playerSeccionSolo, 
-      playerTrimestre 
+      playerSeccionSolo 
     } = get();
 
     if (!playerUser) {
@@ -543,7 +556,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     const level = LEVELS[levelIndex];
     if (!level) return false;
 
-    // Requirement: The activity must appear as "Tarea 3: Juego Algebra" in the T2 section
+    // Ensure scoreValue is strictly capped at max 10 points
+    const cappedScore = Math.min(10, Math.max(0, Math.round(scoreValue)));
+
     const cleanUnidad = "t2"; // Explicitly save under 't2' trimester
     const cleanActividadId = "juego_algebra"; // Matches Tarea 3: Juego Algebra
 
@@ -560,13 +575,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     try {
       const docRef = doc(db, 'notas', docId);
       
-      let finalPunteo = scoreValue;
+      let finalPunteo = cappedScore;
       try {
         const scoreDocSnap = await getDoc(docRef);
         if (scoreDocSnap.exists()) {
           const data = scoreDocSnap.data();
-          const existingPunteo = data.punteo ?? 0;
-          finalPunteo = Math.max(existingPunteo, scoreValue);
+          const existingPunteo = Number(data.punteo ?? 0);
+          // Keep the highest score achieved, strictly capped at 10 max
+          finalPunteo = Math.min(10, Math.max(existingPunteo, cappedScore));
         }
       } catch (e) {
         console.warn("Could not check previous score, using current value:", e);
@@ -579,7 +595,9 @@ export const useGameStore = create<GameState>((set, get) => ({
         grado: playerGradoSolo,
         seccion: playerSeccionSolo,
         actividad: "Tarea 3: Juego Algebra",
-        punteo: finalPunteo, // Reflection of total cumulative points (2, 4, 6, 8, or 10)
+        actividad_nombre: "Tarea 3",
+        punteo: finalPunteo, // Strictly capped at 10 points max
+        punteo_maximo: 10,
         unidad: cleanUnidad,
         trimestre: cleanUnidad.toUpperCase(),
         fecha: formattedDate,
@@ -588,7 +606,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       };
 
       console.log("Saving student score to Firestore with ID:", docId, docData);
-      await setDoc(docRef, docData);
+      await setDoc(docRef, docData, { merge: true });
       return true;
     } catch (err) {
       console.error("Error saving score to Firestore:", err);
